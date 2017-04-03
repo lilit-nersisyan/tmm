@@ -1,13 +1,15 @@
 package org.cytoscape.tmm.processing;
 
-import org.cytoscape.tmm.Enums.ETMMProps;
+import org.cytoscape.model.CyNetwork;
+import org.cytoscape.model.CyNode;
+import org.cytoscape.tmm.gui.CyManager;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.PrintWriter;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Created by Lilit Nersisyan on 4/3/2017.
@@ -21,13 +23,16 @@ public class ExpMatFileHandler {
     private ArrayList<String> genes;
     private int numSamples;
     private String headerLine;
+    private ArrayList<String> samples;
     private File fcMatFile;
-
+    private HashMap<String, HashMap<CyNode, Double>> samplesCyNodeFCValueMap;
+    private CyNetwork network;
 
     public ExpMatFileHandler(File expMatFile, File nodeTableFile, File fcMatFile) {
         this.expMatFile = expMatFile;
         this.nodeTableFile = nodeTableFile;
         this.fcMatFile = fcMatFile;
+        this.network = CyManager.getCurrentNetwork();
     }
 
     /**
@@ -61,12 +66,18 @@ public class ExpMatFileHandler {
 
 
         String header_geneID = headerTokens[0];
+        samples = new ArrayList<>();
+        for(int s = 1; s < headerTokens.length; s++){
+            samples.add(headerTokens[s]);
+        }
+
         numSamples = headerTokens.length - 1;
         boolean success = initFCMatFile();
         if (!success) {
             throw new Exception("A problem occured initiating the FC matrix");
         }
         int n = 1;
+        boolean naWarning = false;
         String line;
         while ((line = reader.readLine()) != null) {
             n++;
@@ -83,7 +94,12 @@ public class ExpMatFileHandler {
                         String t = tokens[j + 1];
                         double value;
                         try {
-                            value = Double.parseDouble(t);
+                            if(t.equals("NA")) {
+                                value = 1;
+                                naWarning = true;
+                            }
+                            else
+                                value = Double.parseDouble(t);
                         } catch (NumberFormatException e) {
                             throw new NumberFormatException("Could not cast "
                                     + t + " to double. File: " + expMatFile.getAbsolutePath()
@@ -112,6 +128,12 @@ public class ExpMatFileHandler {
                 }
             }
         }
+        if(naWarning){
+            System.out.println("NAs were replaced with values of 1!");;
+        }
+
+        //Write fc matrix file
+
         try {
             writeFCMatFile();
         } catch (Exception e) {
@@ -119,13 +141,34 @@ public class ExpMatFileHandler {
                     + ". Reason: " + (e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
         }
 
+        // create CyNode-FC value map
+
+        samplesCyNodeFCValueMap = new HashMap<>();
+        for(int j = 0; j < fcMat[0].length; j++) {
+            String sample = samples.get(j);
+            HashMap<CyNode, Double> nodeFCValueMap = new HashMap<>();
+            for (int i =0 ; i< fcMat.length; i++) {
+                String node = nodes.get(i);
+                CyNode cyNode = CyManager.getCyNodeFromName(node, CyManager.getCurrentNetwork());
+                nodeFCValueMap.put(cyNode, fcMat[i][j]);
+            }
+            samplesCyNodeFCValueMap.put(sample, nodeFCValueMap);
+        }
+
         return true;
     }
 
-    private ArrayList<Integer> indicesOf(String id, ArrayList<String> genes) {
+    /**
+     * Finds all occurrences of an element in the list
+     *
+     * @param element
+     * @param list
+     * @return
+     */
+    private ArrayList<Integer> indicesOf(String element, ArrayList<String> list) {
         ArrayList<Integer> indices = new ArrayList<>();
-        for (int i = 0; i < genes.size(); i++)
-            if (genes.get(i).equals(id))
+        for (int i = 0; i < list.size(); i++)
+            if (list.get(i).equals(element))
                 indices.add(i);
         return indices;
     }
@@ -188,4 +231,11 @@ public class ExpMatFileHandler {
         return true;
     }
 
+    public ArrayList<String> getSamples() {
+        return samples;
+    }
+
+    public HashMap<String, HashMap<CyNode, Double>> getSamplesCyNodeFCValueMap() {
+        return samplesCyNodeFCValueMap;
+    }
 }

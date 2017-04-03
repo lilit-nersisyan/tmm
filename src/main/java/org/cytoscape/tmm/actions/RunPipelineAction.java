@@ -156,6 +156,14 @@ public class RunPipelineAction extends AbstractCyAction {
                         ExpMatFileHandler handler = new ExpMatFileHandler(expMatFile,
                                 nodeTableFile, fcMatFile);
                         boolean valid = handler.processExpMat();
+                        if(valid)
+                            taskMonitor.setStatusMessage("FC values written to file: " + fcMatFile.getAbsolutePath());
+                        taskMonitor.setStatusMessage("Mapping FC values to CyTable");
+                        for(String sample : handler.getSamples()) {
+                            CyManager.setNodeAttributesFromMap(CyManager.getCurrentNetwork(),
+                                    handler.getSamplesCyNodeFCValueMap().get(sample), sample, Double.class);
+                        }
+                        taskMonitor.setStatusMessage("FC values were successfully imported");
                     }
                     if (runPSF && !cancelled) {
                         taskMonitor.setStatusMessage("Running PSF");

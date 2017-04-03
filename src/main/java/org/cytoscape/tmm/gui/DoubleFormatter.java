@@ -1,4 +1,4 @@
-package org.cytoscape.psfc;
+package org.cytoscape.tmm.gui;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
