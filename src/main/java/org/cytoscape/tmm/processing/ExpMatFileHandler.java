@@ -129,7 +129,7 @@ public class ExpMatFileHandler {
             }
         }
         if(naWarning){
-            System.out.println("NAs were replaced with values of 1!");;
+            System.out.println("Warining: NAs found in expMatFile. Those were replaced with values of 1!");;
         }
 
         //Write fc matrix file
@@ -237,5 +237,9 @@ public class ExpMatFileHandler {
 
     public HashMap<String, HashMap<CyNode, Double>> getSamplesCyNodeFCValueMap() {
         return samplesCyNodeFCValueMap;
+    }
+
+    public File getFCFile() {
+        return fcMatFile;
     }
 }

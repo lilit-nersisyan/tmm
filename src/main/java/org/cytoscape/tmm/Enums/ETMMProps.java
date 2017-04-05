@@ -9,7 +9,8 @@ public enum ETMMProps {
     PARENTDIR("ParentDir"),
     ITERATION("Iteration"),
     COMMENT("Comment"),
-    TMMLABELSFILE("TMMLabelsFile");
+    TMMLABELSFILE("TMMLabelsFile"),
+    BOOTCYCLES("BootCycles");
 
     private String name;
     private boolean oldValue = true;

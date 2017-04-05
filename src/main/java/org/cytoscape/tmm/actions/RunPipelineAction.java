@@ -1,7 +1,5 @@
 package org.cytoscape.tmm.actions;
 
-import jdk.nashorn.internal.runtime.ECMAException;
-import jdk.nashorn.internal.scripts.JO;
 import org.cytoscape.application.swing.AbstractCyAction;
 import org.cytoscape.tmm.TMMActivator;
 import org.cytoscape.tmm.gui.CyManager;
@@ -12,13 +10,14 @@ import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Created by Lilit Nersisyan on 3/22/2017.
@@ -35,6 +34,8 @@ public class RunPipelineAction extends AbstractCyAction {
     private File nodeTableFile;
     private String iterationTitle;
     private ActionEvent e;
+    private ArrayList<String> samples = null;
+    private int bootCycles = 200;
 
     public RunPipelineAction(String name, TMMPanel tmmPanel, boolean addFC, boolean runPSF, boolean generateReport) {
         super(name);
@@ -44,11 +45,19 @@ public class RunPipelineAction extends AbstractCyAction {
         this.generateReport = generateReport;
     }
 
+    public void setSamples(ArrayList<String> samples) {
+        this.samples = samples;
+    }
+
     @Override
     public void actionPerformed(ActionEvent e) {
         final RunPipelineTask runPipelineTask = new RunPipelineTask();
         TMMActivator.taskManager.execute(new TaskIterator(runPipelineTask));
         this.e = e;
+    }
+
+    public void setBootCycles(int bootCycles) {
+        this.bootCycles = bootCycles;
     }
 
     private class RunPipelineTask extends AbstractTask {
@@ -133,7 +142,7 @@ public class RunPipelineAction extends AbstractCyAction {
             //export nodes table to the netDir
             try {
                 String geneIDName = tmmPanel.getGeneIDName();
-                if(geneIDName == null)
+                if (geneIDName == null)
                     throw new Exception("No proper Gene ID Column was chosen");
                 nodeTableFile = new File(iterationDir, "nodes_"
                         + iterationTitle + ".csv");
@@ -147,7 +156,6 @@ public class RunPipelineAction extends AbstractCyAction {
             // End of create directories, write comment file
 
             if (!cancelled) {
-
                 try {
                     if (addFC && !cancelled) {
                         taskMonitor.setStatusMessage("Updating FC values");
@@ -156,29 +164,102 @@ public class RunPipelineAction extends AbstractCyAction {
                         ExpMatFileHandler handler = new ExpMatFileHandler(expMatFile,
                                 nodeTableFile, fcMatFile);
                         boolean valid = handler.processExpMat();
-                        if(valid)
+                        if (valid)
                             taskMonitor.setStatusMessage("FC values written to file: " + fcMatFile.getAbsolutePath());
                         taskMonitor.setStatusMessage("Mapping FC values to CyTable");
-                        for(String sample : handler.getSamples()) {
+                        for (String sample : handler.getSamples()) {
                             CyManager.setNodeAttributesFromMap(CyManager.getCurrentNetwork(),
                                     handler.getSamplesCyNodeFCValueMap().get(sample), sample, Double.class);
                         }
                         taskMonitor.setStatusMessage("FC values were successfully imported");
+                        tmmPanel.setSamples(handler.getSamples());
+                        tmmPanel.setFcFile(handler.getFCFile());
+                        tmmPanel.setAddFCDone(true);
+                        tmmPanel.enableButtons();
                     }
                     if (runPSF && !cancelled) {
+                        if(!tmmPanel.isAddFCDone())
+                            throw new Exception("Please, run Add/Update FC values before running Run PSF");
+                        if (samples == null)
+                            throw new Exception("No samples specified. Run Add/Update FC values before running PSF");
                         taskMonitor.setStatusMessage("Running PSF");
                         Map<String, Object> args = new HashMap<>();
                         args.put("edgeTypeColumnName", "type");
-                        args.put("nodeDataColumnNames", "SUSM1_ALT,SKLU_ALT");
+                        String samplesArg = "";
+                        for (int i = 0; i < samples.size(); i++) {
+                            samplesArg += samples.get(i);
+                            if (i != samples.size() - 1)
+                                samplesArg += ",";
+                        }
+                        args.put("nodeDataColumnNames", samplesArg);
+                        if (tmmPanel.getFCFile() == null)
+                            throw new Exception("FC file is null. Run Add/Update FC values before running PSF");
+                        args.put("fcFile", tmmPanel.getFCFile());
+
+                        int bootCycles = tmmPanel.getBootCycles();
+                        args.put("bootCyclesArg", bootCycles + "");
                         TaskIterator taskIterator = TMMActivator.commandExecutor.createTaskIterator(
                                 "psfc", "run psf", args, null);
-                        TMMActivator.taskManager.execute(taskIterator);
+                        File psfcDir = new File(TMMActivator.getTMMDir().getParent(), "PSFC");
+                        File summaryFile = new File(psfcDir, CyManager.getCurrentNetwork().toString() + "_summary.xls");
+                        boolean summaryFileOK = true;
+                        if (summaryFile.exists()) {
+                            boolean success = summaryFile.delete();
+                            if (!success) {
+                                JOptionPane.showMessageDialog(TMMActivator.cytoscapeDesktopService.getJFrame(),
+                                        "Could not delete file"
+                                                + summaryFile.getAbsolutePath() + " maybe the file is in use. " +
+                                                "Please, close it and start again.", "TMM error", JOptionPane.ERROR_MESSAGE);
+                                summaryFileOK = false;
+                            }
+                        }
+                        if (summaryFileOK) {
+                            TMMActivator.taskManager.execute(taskIterator);
+                            taskMonitor.setStatusMessage("Collecting results for backup");
+                            while (!summaryFile.exists()) {
+                                if (cancelled)
+                                    break;
+                            }
+                            File itSummaryFile = new File(new File(tmmPanel.getParentDir(),
+                                    tmmPanel.getIterationTitle()),
+                                    "psf_summary.xls");
+                            boolean itSummaryFileOK = true;
+                            if (itSummaryFile.exists()) {
+                                itSummaryFileOK = itSummaryFile.delete();
+                            }
+                            if (itSummaryFileOK) {
+                                boolean fileInUse = true;
+                                taskMonitor.setStatusMessage("Writing results to summary file");
+                                while (fileInUse) {
+//                                    System.out.printf("summary file in use\n");
+                                    if (cancelled)
+                                        break;
+                                    fileInUse = !summaryFile.renameTo(itSummaryFile);
+                                }
+                                if (itSummaryFile.exists()) {
+                                    System.out.println("summary file size: " + itSummaryFile.length());
+                                    taskMonitor.setStatusMessage("Wrote the resulst to summary file "
+                                            + itSummaryFile.getAbsolutePath());
+                                }
+                                else
+                                    throw new Exception("Run PSF was not successful. " +
+                                            "Could not find summary file " + itSummaryFile.getAbsolutePath());
+
+                            } else {
+                                throw new Exception("File " + itSummaryFile.getAbsolutePath() + " is in use.");
+                            }
+                        }
+                        tmmPanel.setRunPSFDone(true);
+                        tmmPanel.enableButtons();
                     }
                     if (generateReport && !cancelled) {
                         taskMonitor.setStatusMessage("Generating report");
+                        if (!tmmPanel.isRunPSFDone())
+                            throw new Exception("Run PSF task was not completed successfully. Please, rerun it and try again with report generation");
+
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    throw new Exception("TMM exception: " + e.getMessage());
                 } finally {
                     System.gc();
                 }
