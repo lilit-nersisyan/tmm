@@ -173,6 +173,7 @@ public class RunPipelineAction extends AbstractCyAction {
                         }
                         taskMonitor.setStatusMessage("FC values were successfully imported");
                         tmmPanel.setSamples(handler.getSamples());
+                        setSamples(handler.getSamples());
                         tmmPanel.setFcFile(handler.getFCFile());
                         tmmPanel.setAddFCDone(true);
                         tmmPanel.enableButtons();
@@ -198,55 +199,60 @@ public class RunPipelineAction extends AbstractCyAction {
 
                         int bootCycles = tmmPanel.getBootCycles();
                         args.put("bootCyclesArg", bootCycles + "");
+
+                        args.put("backupDir", iterationDir);
+
                         TaskIterator taskIterator = TMMActivator.commandExecutor.createTaskIterator(
                                 "psfc", "run psf", args, null);
-                        File psfcDir = new File(TMMActivator.getTMMDir().getParent(), "PSFC");
-                        File summaryFile = new File(psfcDir, CyManager.getCurrentNetwork().toString() + "_summary.xls");
-                        boolean summaryFileOK = true;
-                        if (summaryFile.exists()) {
-                            boolean success = summaryFile.delete();
-                            if (!success) {
-                                JOptionPane.showMessageDialog(TMMActivator.cytoscapeDesktopService.getJFrame(),
-                                        "Could not delete file"
-                                                + summaryFile.getAbsolutePath() + " maybe the file is in use. " +
-                                                "Please, close it and start again.", "TMM error", JOptionPane.ERROR_MESSAGE);
-                                summaryFileOK = false;
+                        if(samples.size() >= 2) {
+                            File tmmDir = new File(TMMActivator.getTMMDir().getParent(), "PSFC");
+                            File summaryFile = new File(tmmDir, CyManager.getCurrentNetwork().toString() + "_summary.xls");
+                            boolean summaryFileOK = true;
+                            if (summaryFile.exists()) {
+                                boolean success = summaryFile.delete();
+                                if (!success) {
+                                    JOptionPane.showMessageDialog(TMMActivator.cytoscapeDesktopService.getJFrame(),
+                                            "Could not delete file"
+                                                    + summaryFile.getAbsolutePath() + " maybe the file is in use. " +
+                                                    "Please, close it and start again.", "TMM error", JOptionPane.ERROR_MESSAGE);
+                                    summaryFileOK = false;
+                                }
                             }
-                        }
-                        if (summaryFileOK) {
-                            TMMActivator.taskManager.execute(taskIterator);
-                            taskMonitor.setStatusMessage("Collecting results for backup");
-                            while (!summaryFile.exists()) {
-                                if (cancelled)
-                                    break;
-                            }
-                            File itSummaryFile = new File(new File(tmmPanel.getParentDir(),
-                                    tmmPanel.getIterationTitle()),
-                                    "psf_summary.xls");
-                            boolean itSummaryFileOK = true;
-                            if (itSummaryFile.exists()) {
-                                itSummaryFileOK = itSummaryFile.delete();
-                            }
-                            if (itSummaryFileOK) {
-                                boolean fileInUse = true;
-                                taskMonitor.setStatusMessage("Writing results to summary file");
-                                while (fileInUse) {
-//                                    System.out.printf("summary file in use\n");
+                            if (summaryFileOK) {
+                                TMMActivator.taskManager.execute(taskIterator);
+                                taskMonitor.setStatusMessage("Collecting results for backup");
+                                while (!summaryFile.exists()) {
                                     if (cancelled)
                                         break;
-                                    fileInUse = !summaryFile.renameTo(itSummaryFile);
                                 }
+                                File itSummaryFile = new File(new File(tmmPanel.getParentDir(),
+                                        tmmPanel.getIterationTitle()),
+                                        "psf_summary.xls");
+                                boolean itSummaryFileOK = true;
                                 if (itSummaryFile.exists()) {
-                                    System.out.println("summary file size: " + itSummaryFile.length());
-                                    taskMonitor.setStatusMessage("Wrote the resulst to summary file "
-                                            + itSummaryFile.getAbsolutePath());
+                                    itSummaryFileOK = itSummaryFile.delete();
                                 }
-                                else
-                                    throw new Exception("Run PSF was not successful. " +
-                                            "Could not find summary file " + itSummaryFile.getAbsolutePath());
+                                if (itSummaryFileOK) {
+                                    boolean fileInUse = true;
+                                    taskMonitor.setStatusMessage("Writing results to summary file");
+                                    while (fileInUse) {
+//                                    System.out.printf("summary file in use\n");
+                                        if (cancelled)
+                                            break;
+                                        fileInUse = !summaryFile.renameTo(itSummaryFile);
+                                    }
+                                    if (itSummaryFile.exists()) {
+                                        tmmPanel.setSummaryFile(itSummaryFile);
+                                        System.out.println("summary file size: " + itSummaryFile.length());
+                                        taskMonitor.setStatusMessage("Wrote the resulst to summary file "
+                                                + itSummaryFile.getAbsolutePath());
+                                    } else
+                                        throw new Exception("Run PSF was not successful. " +
+                                                "Could not find summary file " + itSummaryFile.getAbsolutePath());
 
-                            } else {
-                                throw new Exception("File " + itSummaryFile.getAbsolutePath() + " is in use.");
+                                } else {
+                                    throw new Exception("File " + itSummaryFile.getAbsolutePath() + " is in use.");
+                                }
                             }
                         }
                         tmmPanel.setRunPSFDone(true);

@@ -9,6 +9,7 @@ import org.cytoscape.tmm.Enums.ETMMProps;
 import org.cytoscape.tmm.TMMActivator;
 import org.cytoscape.tmm.actions.OpenFileChooserAction;
 import org.cytoscape.tmm.actions.RunPipelineAction;
+import org.cytoscape.tmm.actions.VizSampleAction;
 
 import javax.swing.*;
 import java.awt.*;
@@ -35,6 +36,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     private int bootCycles;
     private boolean runPSFDone;
     private boolean addFCDone;
+    private File summaryFile;
 
 
     public TMMPanel() throws Exception {
@@ -133,6 +135,13 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         enableButtons();
     }
 
+    public void setSummaryFile(File summaryFile) {
+        this.summaryFile = summaryFile;
+    }
+
+    public File getSummaryFile() {
+        return summaryFile;
+    }
 
     public void setFcFile(File fcFile) {
         this.fcFile = fcFile;
@@ -387,6 +396,13 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             }
         });
 
+        jb_viz.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_vizActionPerformed(e);
+            }
+        });
+
     }
 
 
@@ -562,6 +578,12 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         }
     }
 
+    private void jb_vizActionPerformed(ActionEvent e) {
+        String sample = jcb_samples.getSelectedItem().toString();
+        VizSampleAction vizSampleAction = new VizSampleAction(
+                "Visualise sample PSF task", this, sample);
+        vizSampleAction.actionPerformed(e);
+    }
 
     private void initComponents() {
         jp_filesAndTitles = new javax.swing.JPanel();
