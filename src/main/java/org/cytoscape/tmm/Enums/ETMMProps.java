@@ -10,7 +10,8 @@ public enum ETMMProps {
     ITERATION("Iteration"),
     COMMENT("Comment"),
     TMMLABELSFILE("TMMLabelsFile"),
-    BOOTCYCLES("BootCycles");
+    BOOTCYCLES("BootCycles"),
+    VALIDATIONMODE("ValidationMode");
 
     private String name;
     private boolean oldValue = true;

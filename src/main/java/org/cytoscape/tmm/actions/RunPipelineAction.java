@@ -5,9 +5,8 @@ import org.cytoscape.tmm.TMMActivator;
 import org.cytoscape.tmm.gui.CyManager;
 import org.cytoscape.tmm.gui.TMMPanel;
 import org.cytoscape.tmm.processing.ExpMatFileHandler;
-import org.cytoscape.work.AbstractTask;
-import org.cytoscape.work.TaskIterator;
-import org.cytoscape.work.TaskMonitor;
+import org.cytoscape.tmm.processing.ParsedFilesDirectory;
+import org.cytoscape.work.*;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -28,16 +27,13 @@ public class RunPipelineAction extends AbstractCyAction {
     private boolean generateReport = false;
     private boolean cancelled = false;
     private TMMPanel tmmPanel;
-    private File parentDir;
-    private File iterationDir;
-    private File expMatFile;
-    private File nodeTableFile;
-    private String iterationTitle;
     private ActionEvent e;
     private ArrayList<String> samples = null;
     private int bootCycles = 200;
+    private boolean isParsing = false;
 
-    public RunPipelineAction(String name, TMMPanel tmmPanel, boolean addFC, boolean runPSF, boolean generateReport) {
+    public RunPipelineAction(String name, TMMPanel tmmPanel,
+                             boolean addFC, boolean runPSF, boolean generateReport) {
         super(name);
         this.tmmPanel = tmmPanel;
         this.addFC = addFC;
@@ -60,6 +56,10 @@ public class RunPipelineAction extends AbstractCyAction {
         this.bootCycles = bootCycles;
     }
 
+    public boolean parsing() {
+        return isParsing;
+    }
+
     private class RunPipelineTask extends AbstractTask {
 
         @Override
@@ -67,119 +67,34 @@ public class RunPipelineAction extends AbstractCyAction {
             taskMonitor.setTitle("TMM");
             taskMonitor.setStatusMessage("TMM task started");
 
-            // Start of Create directories, write comment file
-            try {
-                parentDir = tmmPanel.getParentDir();
-                if (parentDir == null) {
-                    throw new Exception("Parent directory is null");
-                }
-            } catch (Exception e) {
-                throw new Exception("TMM exception: " + (e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
-            }
-
-            try {
-                expMatFile = tmmPanel.getExpMatFile();
-                if (expMatFile == null) {
-                    throw new Exception("Expression matrix is null");
-                }
-            } catch (Exception e) {
-                throw new Exception("TMM exception: " + (e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
-            }
-            try {
-                iterationTitle = tmmPanel.getIterationTitle();
-                iterationDir = new File(parentDir, iterationTitle);
-                if (iterationDir.exists()) {
-                    if (!iterationDir.isDirectory()) {
-                        JOptionPane jOptionPane = new JOptionPane();
-                        jOptionPane.showMessageDialog(TMMActivator.cytoscapeDesktopService.getJFrame(),
-                                "There is a file with the same name as the iteration directory " + iterationDir.getName()
-                                        + ". Please, remove it and try again",
-                                "TMM directory file exists", JOptionPane.OK_OPTION);
-                        cancel();
-                    }
-                } else {
-                    boolean success = false;
-                    try {
-                        success = iterationDir.mkdir();
-                    } catch (Exception e) {
-                        throw new Exception("Unable to create directory "
-                                + iterationDir.getAbsolutePath()
-                                + " . Reason: " + (e.getCause() == null ? e.getMessage() : e.getCause().getMessage()));
-                    }
-                    if (!success) {
-                        throw new Exception("Unable to create directory "
-                                + iterationDir.getAbsolutePath());
-                    }
-                }
-
-            } catch (Exception e) {
-                throw new Exception("TMM: problem creating directories for the iteration"
-                        + (e.getCause() == null ? e.getCause().getMessage() : e.getMessage()));
-            }
-
-            File commentFile = new File(iterationDir, "comment.txt");
-            String comment = tmmPanel.getCommentText();
-            PrintWriter writer = new PrintWriter(commentFile);
-            try {
-                writer.write(comment);
-                writer.close();
-            } catch (Exception e) {
-                throw new Exception("Problem writing comment to file : " + commentFile
-                        + " .Reason: " + (e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
-            }
-
-            //export network
-            try {
-                File netFile = new File(iterationDir, iterationTitle + ".xgmml");
-                new ExportNetworkAction(CyManager.getCurrentNetwork(),
-                        netFile.getAbsolutePath()).actionPerformed(e);
-            } catch (Exception e1) {
-                throw new Exception("Problem exporting network to file. Reason: "
-                        + (e1.getCause() != null ? e1.getCause().getMessage() : e1.getMessage()));
-            }
-
-
-            //export nodes table to the netDir
-            try {
-                String geneIDName = tmmPanel.getGeneIDName();
-                if (geneIDName == null)
-                    throw new Exception("No proper Gene ID Column was chosen");
-                nodeTableFile = new File(iterationDir, "nodes_"
-                        + iterationTitle + ".csv");
-                CyManager.exportNodeNameEntrezTable(CyManager.getCurrentNetwork(),
-                        geneIDName, nodeTableFile);
-            } catch (Exception e1) {
-                throw new Exception("Problem exporting node table to file. Reason: "
-                        + (e1.getCause() != null ? e1.getCause().getMessage() : e1.getMessage()));
-            }
-
+            ParsedFilesDirectory parsedFilesDirectory = tmmPanel.getParsedFilesDirectory();
+            File iterationDir = parsedFilesDirectory.getIterationDir();
+            String iterationTitle = parsedFilesDirectory.getIterationTitle();
+            File expMatFile = parsedFilesDirectory.getExpMatFile();
+            File nodeTableFile = parsedFilesDirectory.getNodeTableFile();
+            ExpMatFileHandler handler = parsedFilesDirectory.getExpMatFileHandler();
+            File fcMatFile = parsedFilesDirectory.getFcMatFile();
             // End of create directories, write comment file
 
             if (!cancelled) {
                 try {
+                    taskMonitor.setStatusMessage("Parsing input files");
+                    isParsing = false;
                     if (addFC && !cancelled) {
-                        taskMonitor.setStatusMessage("Updating FC values");
-                        File fcMatFile = new File(iterationDir,
-                                "fc_" + iterationTitle + ".txt");
-                        ExpMatFileHandler handler = new ExpMatFileHandler(expMatFile,
-                                nodeTableFile, fcMatFile);
-                        boolean valid = handler.processExpMat();
-                        if (valid)
-                            taskMonitor.setStatusMessage("FC values written to file: " + fcMatFile.getAbsolutePath());
                         taskMonitor.setStatusMessage("Mapping FC values to CyTable");
                         for (String sample : handler.getSamples()) {
                             CyManager.setNodeAttributesFromMap(CyManager.getCurrentNetwork(),
                                     handler.getSamplesCyNodeFCValueMap().get(sample), sample, Double.class);
                         }
                         taskMonitor.setStatusMessage("FC values were successfully imported");
-                        tmmPanel.setSamples(handler.getSamples());
+
                         setSamples(handler.getSamples());
                         tmmPanel.setFcFile(handler.getFCFile());
                         tmmPanel.setAddFCDone(true);
                         tmmPanel.enableButtons();
                     }
                     if (runPSF && !cancelled) {
-                        if(!tmmPanel.isAddFCDone())
+                        if (!tmmPanel.isAddFCDone())
                             throw new Exception("Please, run Add/Update FC values before running Run PSF");
                         if (samples == null)
                             throw new Exception("No samples specified. Run Add/Update FC values before running PSF");
@@ -201,10 +116,11 @@ public class RunPipelineAction extends AbstractCyAction {
                         args.put("bootCyclesArg", bootCycles + "");
 
                         args.put("backupDir", iterationDir);
-
+                        MyTaskObserver taskObserver = new MyTaskObserver();
                         TaskIterator taskIterator = TMMActivator.commandExecutor.createTaskIterator(
-                                "psfc", "run psf", args, null);
-                        if(samples.size() >= 2) {
+                                "psfc", "run psf", args, taskObserver);
+
+                        if (samples.size() >= 2 && !cancelled) {
                             File tmmDir = new File(TMMActivator.getTMMDir().getParent(), "PSFC");
                             File summaryFile = new File(tmmDir, CyManager.getCurrentNetwork().toString() + "_summary.xls");
                             boolean summaryFileOK = true;
@@ -220,11 +136,11 @@ public class RunPipelineAction extends AbstractCyAction {
                             }
                             if (summaryFileOK) {
                                 TMMActivator.taskManager.execute(taskIterator);
-                                taskMonitor.setStatusMessage("Collecting results for backup");
                                 while (!summaryFile.exists()) {
                                     if (cancelled)
                                         break;
                                 }
+                                taskMonitor.setStatusMessage("Collecting results for backup");
                                 File itSummaryFile = new File(new File(tmmPanel.getParentDir(),
                                         tmmPanel.getIterationTitle()),
                                         "psf_summary.xls");
@@ -253,6 +169,8 @@ public class RunPipelineAction extends AbstractCyAction {
                                 } else {
                                     throw new Exception("File " + itSummaryFile.getAbsolutePath() + " is in use.");
                                 }
+                            } else{
+                                throw new Exception("TMM Run PSF task not successful: problem with summary file");
                             }
                         }
                         tmmPanel.setRunPSFDone(true);
@@ -263,6 +181,30 @@ public class RunPipelineAction extends AbstractCyAction {
                         if (!tmmPanel.isRunPSFDone())
                             throw new Exception("Run PSF task was not completed successfully. Please, rerun it and try again with report generation");
 
+                        File reportDir = new File(iterationDir, iterationTitle + "_report");
+                        while (reportDir.exists()) {
+                            reportDir = new File(reportDir.getAbsolutePath() + "+");
+                        }
+                        reportDir.mkdir();
+
+                        GenerateReportAction generateReportAction;
+                        if (tmmPanel.isValidationMode()) {
+                            generateReportAction = new GenerateReportAction(
+                                    "Generating report",
+                                    tmmPanel.getSummaryFile(), reportDir,
+                                    tmmPanel.getTmmLabelsFile(),
+                                    tmmPanel.getIterationTitle(),
+                                    tmmPanel.getCommentText(), tmmPanel.getBootCycles());
+                        } else
+                            generateReportAction = new GenerateReportAction(
+                                    "Generate report action",
+                                    tmmPanel.getSummaryFile(),
+                                    reportDir, tmmPanel.getIterationTitle(),
+                                    tmmPanel.getCommentText(), tmmPanel.getBootCycles());
+                        generateReportAction.actionPerformed(e);
+                        tmmPanel.setReportFile(generateReportAction.getPdfFile());
+                        tmmPanel.setGenerateReportDone(true);
+                        tmmPanel.enableButtons();
                     }
                 } catch (Exception e) {
                     throw new Exception("TMM exception: " + e.getMessage());
@@ -278,55 +220,6 @@ public class RunPipelineAction extends AbstractCyAction {
             System.gc();
         }
 
-
-     /*   private Set<String> addFCActionPerformed(ActionEvent e) throws Exception {
-
-            //make a directory parent.dir/alt-tert/iteration
-            File netsParentDir = new File(jl_selectedParentDir.getToolTipText(), "alt-tert"); // alt-tert until set by the user
-            NetIteration.setIteration(jtxt_iteration.getText());
-            File netDir = new File(netsParentDir, NetIteration.getIteration());
-            System.out.println("PSFC:: creating folder " + netDir.getAbsolutePath());
-            if (netDir.exists()) {
-                int ans = JOptionPane.showConfirmDialog(this, "Directory " + netDir.getAbsolutePath() + " already exists. \n " +
-                        "Do you want to replace it? ");
-                if (ans == JOptionPane.NO_OPTION || ans == JOptionPane.CANCEL_OPTION) {
-                    return null;
-                }
-            } else {
-                boolean success = netDir.mkdir();
-                if (!success) {
-                    throw new Exception("PSFC:: Net: could not create folder " + netDir.getAbsolutePath());
-                }
-            }
-            NetIteration.setNetDir(netDir);
-            //export network
-            File netFile = new File(netDir, NetIteration.getIteration() + ".xgmml");
-            new ExportNetworkAction(getSelectedNetwork(), netFile.getAbsolutePath()).actionPerformed(e);
-
-            //export nodes table to the netDir
-            File nodeFile = new File(netDir, "nodes_" + NetIteration.getIteration() + ".csv");
-            psfcpane    NetworkCyManager.exportNodeNameEntrezTable(getSelectedNetwork(), nodeFile);
-
-
-            NetIteration.processData();
-            File fcMat = new File(netDir, "fc_" + NetIteration.getIteration() + ".txt");
-            if (fcMat.exists()) {
-                System.out.println("PSFC:: Net: Computed fc values and stored in " + fcMat.getAbsolutePath());
-            }
-            NetIteration.setFcMat(fcMat);
-            System.out.println("PSFC:: Net: ran the Rscript preprocess.R");
-            Set<String> colnames = NetworkCyManager.setNodeAttributesFromFile(getSelectedNetwork(), fcMat);
-            System.out.println("PSFC:: imported fc attributes");
-            NetIteration.setColnames(colnames);
-            return colnames;
-            //import the fc file
-        }
-
-        private void jb_runPSFActionPerformed(ActionEvent e)  {
-            TaskIterator taskIterator = new TaskIterator();
-            taskIterator.append(new runPSFandGenerateReportTask(e));
-            PSFCActivator.taskManager.execute(taskIterator);
-        }*/
 
     }
 }

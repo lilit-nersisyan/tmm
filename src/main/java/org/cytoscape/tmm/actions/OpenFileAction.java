@@ -6,10 +6,12 @@ import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 
 /**
  * Created by User on 6/10/2015.
@@ -38,32 +40,25 @@ public class OpenFileAction extends AbstractCyAction {
         public void run(TaskMonitor taskMonitor) throws Exception {
             taskMonitor.setTitle("TMM: Opening " + fileName);
 
-            taskMonitor.setProgress(0.1);
 
             try {
-                file = new File(TMMActivator.getTMMDir(), fileName);
-                if (!file.exists()) {
-                    ClassLoader cl = this.getClass().getClassLoader();
-                    java.io.InputStream in = cl.getResourceAsStream(fileName);
-                    if (in == null) {
-                        throw  new Exception("TMM::Exception " + "Null InputStream: " + fileName + "could not be loaded from the plugin jar file.");
+                File file = new File(fileName);
+                if (file!= null & file.exists()) {
+                    try {
+                        Desktop.getDesktop().open(file);
+                    } catch (IOException e1) {
+                        try {
+                            Desktop.getDesktop().open(file.getParentFile());
+                        } catch (IOException e2) {
+                            throw  new Exception("TMM:: cannot open the folder: "
+                                    + file.getParent());
+                        }
+                        throw new Exception("TMM:: cannot open the file: "
+                                + file + " for editing");
                     }
-
-                    FileOutputStream out = new FileOutputStream(file);
-                    byte[] bytes = new byte[1024];
-                    int read;
-                    while ((read = in.read(bytes)) != -1 && !cancelled) {
-                        out.write(bytes, 0, read);
-                    }
-                    in.close();
-                    out.close();
-                }
-                taskMonitor.setProgress(0.8);
-                taskMonitor.setStatusMessage("Opening File " + file.getAbsolutePath());
-                if (Desktop.isDesktopSupported())
-                    Desktop.getDesktop().open(file);
-                else{
-                    throw new Exception("TMM::Exception " + "Desktop is not supported!");
+                } else {
+                    throw new Exception("The file " + file + " does not exist. " +
+                            "Try generating the report again");
                 }
             } catch (Exception e) {
                 throw new Exception("TMM::Exception " + "Problems opening " + file.getAbsolutePath() +

@@ -42,13 +42,12 @@ public class ExpMatFileHandler {
      * Header: GeneID   Sample1  Sample2  Sample3 ...
      * Rows: gene   expValue1   expValue2   expValue3...
      * <p>
-     * If the file is valid, creates an FC file to
+     * If the file is valid, creates an FC file to, otherwise throws an Exception.
      *
-     * @return boolean valid - true if the expMatFile was valid and successfully processed; false - otherwise
+     *
      * @throws Exception
      */
-    public boolean processExpMat() throws Exception {
-        boolean valid = true;
+    public void processExpMat() throws Exception {
         if (expMatFile == null) {
             throw new Exception("Exp Matrix file not specified.");
         }
@@ -67,7 +66,7 @@ public class ExpMatFileHandler {
 
         String header_geneID = headerTokens[0];
         samples = new ArrayList<>();
-        for(int s = 1; s < headerTokens.length; s++){
+        for (int s = 1; s < headerTokens.length; s++) {
             samples.add(headerTokens[s]);
         }
 
@@ -94,11 +93,10 @@ public class ExpMatFileHandler {
                         String t = tokens[j + 1];
                         double value;
                         try {
-                            if(t.equals("NA")) {
+                            if (t.equals("NA")) {
                                 value = 1;
                                 naWarning = true;
-                            }
-                            else
+                            } else
                                 value = Double.parseDouble(t);
                         } catch (NumberFormatException e) {
                             throw new NumberFormatException("Could not cast "
@@ -128,8 +126,9 @@ public class ExpMatFileHandler {
                 }
             }
         }
-        if(naWarning){
-            System.out.println("Warining: NAs found in expMatFile. Those were replaced with values of 1!");;
+        if (naWarning) {
+            System.out.println("Warining: NAs found in expMatFile. Those were replaced with values of 1!");
+            ;
         }
 
         //Write fc matrix file
@@ -144,10 +143,10 @@ public class ExpMatFileHandler {
         // create CyNode-FC value map
 
         samplesCyNodeFCValueMap = new HashMap<>();
-        for(int j = 0; j < fcMat[0].length; j++) {
+        for (int j = 0; j < fcMat[0].length; j++) {
             String sample = samples.get(j);
             HashMap<CyNode, Double> nodeFCValueMap = new HashMap<>();
-            for (int i =0 ; i< fcMat.length; i++) {
+            for (int i = 0; i < fcMat.length; i++) {
                 String node = nodes.get(i);
                 CyNode cyNode = CyManager.getCyNodeFromName(node, CyManager.getCurrentNetwork());
                 nodeFCValueMap.put(cyNode, fcMat[i][j]);
@@ -155,7 +154,6 @@ public class ExpMatFileHandler {
             samplesCyNodeFCValueMap.put(sample, nodeFCValueMap);
         }
 
-        return true;
     }
 
     /**
@@ -241,5 +239,22 @@ public class ExpMatFileHandler {
 
     public File getFCFile() {
         return fcMatFile;
+    }
+
+    public static ArrayList<String> getFirstColumn(File expMatFile) throws Exception {
+        if (expMatFile == null) {
+            throw new Exception("Exp Matrix file not specified.");
+        }
+        if (!expMatFile.exists()) {
+            throw new Exception("Exp Matrix file " + expMatFile.getAbsolutePath() + " does not exist");
+        }
+
+        BufferedReader reader = new BufferedReader(new FileReader(expMatFile));
+        ArrayList<String> samples = new ArrayList<>();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            samples.add(line.split("\t")[0]);
+        }
+        return samples;
     }
 }
