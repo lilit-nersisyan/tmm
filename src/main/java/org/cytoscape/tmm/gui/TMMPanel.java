@@ -627,6 +627,13 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             }
         });
 
+        jb_webpage.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_webpageActionPerformed(e);
+            }
+        });
+
     }
 
 
@@ -974,6 +981,11 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         vizSampleAction.actionPerformed(e);
     }
 
+    private void jb_webpageActionPerformed(ActionEvent e){
+        WebLoadAction webLoadAction = new WebLoadAction(TMMActivator.getWebPageUrl());
+        webLoadAction.actionPerformed(e);
+    }
+
     private void initComponents() {
         jp_filesAndTitles = new javax.swing.JPanel();
         jl_chosenExpMatFile = new javax.swing.JLabel();
@@ -1008,7 +1020,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jtxt_bootCycles = new javax.swing.JTextField();
         jl_bootstrap = new javax.swing.JLabel();
         jb_openReport = new javax.swing.JButton();
-        jb_UserGuide = new javax.swing.JButton();
+        jb_webpage = new javax.swing.JButton();
         jp_visualization = new javax.swing.JPanel();
         jl_samples = new javax.swing.JLabel();
         jcb_samples = new javax.swing.JComboBox<>();
@@ -1286,11 +1298,11 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                 .addContainerGap())
         );
 
-        jb_UserGuide.setBackground(new java.awt.Color(255, 204, 0));
-        jb_UserGuide.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
-        jb_UserGuide.setForeground(new java.awt.Color(102, 103, 114));
-        jb_UserGuide.setText("Project webpage");
-        jb_UserGuide.setBorder(javax.swing.BorderFactory.createMatteBorder(1, 1, 1, 1, new java.awt.Color(255, 204, 0)));
+        jb_webpage.setBackground(new java.awt.Color(255, 204, 0));
+        jb_webpage.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
+        jb_webpage.setForeground(new java.awt.Color(102, 103, 114));
+        jb_webpage.setText("Project webpage");
+        jb_webpage.setBorder(javax.swing.BorderFactory.createMatteBorder(1, 1, 1, 1, new java.awt.Color(255, 204, 0)));
 
         jp_visualization.setBorder(javax.swing.BorderFactory.createEtchedBorder());
 
@@ -1343,7 +1355,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                                 .addComponent(jp_visualization, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                 .addGroup(layout.createSequentialGroup()
                                                         .addGap(72, 72, 72)
-                                                        .addComponent(jb_UserGuide, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                        .addComponent(jb_webpage, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE))
                                                 .addComponent(jp_filesAndTitles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                 .addComponent(jp_modeAndLabels, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 354, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addComponent(jp_run, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
@@ -1363,13 +1375,13 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jp_visualization, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jb_UserGuide, javax.swing.GroupLayout.PREFERRED_SIZE, 42, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(jb_webpage, javax.swing.GroupLayout.PREFERRED_SIZE, 42, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
     }
 
     // Variables declaration - do not modify
-    private javax.swing.JButton jb_UserGuide;
+    private javax.swing.JButton jb_webpage;
     private javax.swing.JButton jb_addFC;
     private javax.swing.JButton jb_browseParentDir;
     private javax.swing.JButton jb_chooseExpMatFile;

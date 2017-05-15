@@ -44,7 +44,6 @@ public class ExpMatFileHandler {
      * <p>
      * If the file is valid, creates an FC file to, otherwise throws an Exception.
      *
-     *
      * @throws Exception
      */
     public void processExpMat() throws Exception {
@@ -118,10 +117,10 @@ public class ExpMatFileHandler {
                         if (mean == 0) // this will be the case when all the values are 0
                             for (int j = 0; j < numSamples; j++)
                                 fcMat[i][j] = 1;
-
-                        for (int j = 0; j < numSamples; j++) {
-                            fcMat[i][j] = fcMat[i][j] / mean;
-                        }
+                        else
+                            for (int j = 0; j < numSamples; j++) {
+                                fcMat[i][j] = fcMat[i][j] / mean;
+                            }
                     }
                 }
             }

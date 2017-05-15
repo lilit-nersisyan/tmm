@@ -59,6 +59,7 @@ public class TMMActivator extends AbstractCyActivator {
 
     public static TMMPanel tmmPanel;
     private static File TMMDir;
+    private static String webPageUrl = "http://big.sci.am/software/tmm/";
 
 
     private static Logger TMMLogger;
@@ -335,5 +336,9 @@ public class TMMActivator extends AbstractCyActivator {
 
     public static String getUserManualURL() {
         return userManualURL;
+    }
+
+    public static String getWebPageUrl() {
+        return webPageUrl;
     }
 }
