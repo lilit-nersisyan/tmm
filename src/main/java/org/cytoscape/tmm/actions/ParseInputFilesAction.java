@@ -24,7 +24,6 @@ import java.util.ArrayList;
 public class ParseInputFilesAction extends AbstractCyAction {
     private TMMPanel tmmPanel;
     private boolean finished = false;
-    private boolean allValid = false;
     private ActionEvent e;
     private ParsedFilesDirectory parsedFilesDirectory = new ParsedFilesDirectory();
 
@@ -39,7 +38,7 @@ public class ParseInputFilesAction extends AbstractCyAction {
     }
 
     public boolean isAllValid() {
-        return allValid;
+        return parsedFilesDirectory.isAllValid();
     }
 
     @Override
@@ -234,7 +233,6 @@ public class ParseInputFilesAction extends AbstractCyAction {
                     }
 
                     tmmPanel.setSamples(handler.getSamples());
-                    allValid = true;
                 } catch (Exception e) {
                     parsedFilesDirectory.setErrorToolTip(ParsedFilesDirectory.EXPMATFILE, e.getMessage());
                     throw new Exception("Exception parsing expression matrix file: " + e.getMessage());

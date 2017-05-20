@@ -176,7 +176,7 @@ public class ExpMatFileHandler {
                 throw new Exception("Could not delete " + fcMatFile.getAbsolutePath());
 
         PrintWriter writer = new PrintWriter(fcMatFile);
-        writer.write(headerLine);
+        writer.write(headerLine + "\n");
         for (int i = 0; i < fcMat.length; i++) {
             writer.append(nodes.get(i));
             for (int j = 0; j < fcMat[0].length; j++) {

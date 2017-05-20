@@ -194,13 +194,14 @@ public class RunPipelineAction extends AbstractCyAction {
                                     tmmPanel.getSummaryFile(), reportDir,
                                     tmmPanel.getTmmLabelsFile(),
                                     tmmPanel.getIterationTitle(),
-                                    tmmPanel.getCommentText(), tmmPanel.getBootCycles());
+                                    tmmPanel.getCommentText(),
+                                    tmmPanel.getBootCycles(), parsedFilesDirectory);
                         } else
                             generateReportAction = new GenerateReportAction(
                                     "Generate report action",
                                     tmmPanel.getSummaryFile(),
                                     reportDir, tmmPanel.getIterationTitle(),
-                                    tmmPanel.getCommentText(), tmmPanel.getBootCycles());
+                                    tmmPanel.getCommentText(), tmmPanel.getBootCycles(), parsedFilesDirectory);
                         generateReportAction.actionPerformed(e);
                         tmmPanel.setReportFile(generateReportAction.getPdfFile());
                         tmmPanel.setGenerateReportDone(true);

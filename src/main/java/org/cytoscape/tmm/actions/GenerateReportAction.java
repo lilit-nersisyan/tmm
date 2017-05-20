@@ -5,6 +5,7 @@ import com.itextpdf.text.Font;
 import org.cytoscape.application.swing.AbstractCyAction;
 import org.cytoscape.tmm.TMMActivator;
 import org.cytoscape.tmm.gui.DoubleFormatter;
+import org.cytoscape.tmm.processing.ParsedFilesDirectory;
 import org.cytoscape.tmm.reports.*;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.TaskIterator;
@@ -37,16 +38,17 @@ public class GenerateReportAction extends AbstractCyAction {
     private SVM svm;
     private HashMap<String, Double> boxplotStats;
     private int bootCycles;
+    private ParsedFilesDirectory parsedFilesDirectory;
 
     /**
      * Standart constructor for the non-labeled samples case.
-     *
-     * @param name        the name of the action
+     *  @param name        the name of the action
      * @param summaryFile the file containing PSF summary values
      * @param reportDir     the output pdf file
+     * @param parsedFilesDirectory
      */
     public GenerateReportAction(String name, File summaryFile, File reportDir,
-                                String iterationTitle, String comment, int bootCycles) {
+                                String iterationTitle, String comment, int bootCycles, ParsedFilesDirectory parsedFilesDirectory) {
         super(name);
         this.summaryFile = summaryFile;
         this.reportDir = reportDir;
@@ -55,18 +57,19 @@ public class GenerateReportAction extends AbstractCyAction {
         this.pdfFile = new File(reportDir, iterationTitle + "_report.pdf");
         this.numericFile = new File(reportDir, iterationTitle + "_scores.txt");
         this.bootCycles = bootCycles;
+        this.parsedFilesDirectory = parsedFilesDirectory;
     }
 
     /**
      * Standart constructor for the case of annotated labeled samples.
-     *
-     * @param name          the name of the action
+     *  @param name          the name of the action
      * @param summaryFile   the file containing SPF summary values
      * @param reportDir       the output pdf file
      * @param tmmLabelsFile the file containing TMM annotations
+     * @param parsedFilesDirectory
      */
     public GenerateReportAction(String name, File summaryFile, File reportDir,
-                                File tmmLabelsFile, String iterationTitle, String comment, int bootCycles) {
+                                File tmmLabelsFile, String iterationTitle, String comment, int bootCycles, ParsedFilesDirectory parsedFilesDirectory) {
         super(name);
         this.summaryFile = summaryFile;
         this.reportDir = reportDir;
@@ -76,6 +79,7 @@ public class GenerateReportAction extends AbstractCyAction {
         this.pdfFile = new File(reportDir, iterationTitle + "_report.pdf");
         this.numericFile = new File(reportDir, iterationTitle + "_scores.txt");
         this.bootCycles = bootCycles;
+        this.parsedFilesDirectory = parsedFilesDirectory;
     }
 
     @Override
@@ -252,12 +256,18 @@ public class GenerateReportAction extends AbstractCyAction {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
             String dateTime = sdf.format(new Date());
 
-            firstPage.add(content(dateTime));
+            firstPage.add(content("\nDate:      " + dateTime));
 
             firstPage.add(header("Comments on iteration:"));
             if (comment.equals(""))
                 comment = "No comment supplied";
             firstPage.add(content(comment));
+
+            firstPage.add(header("Inputs:"));
+            String inputs = "";
+            inputs += "Iteration dir:      " + parsedFilesDirectory.getIterationDir().getAbsolutePath() + "\n";
+            inputs += "Gene expression matrix:      " + parsedFilesDirectory.getExpMatFile().getAbsolutePath() + "\n";
+            firstPage.add(content(inputs));
 
             firstPage.add(header("Options:"));
 

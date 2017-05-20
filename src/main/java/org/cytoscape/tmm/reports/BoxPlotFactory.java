@@ -223,7 +223,13 @@ public class BoxPlotFactory {
 
         String[] labels = new String[labelList.size()];
         labelList.toArray(labels);
-        double p = Stats.rankSum(data, labels);
+
+        double p = Double.NaN;
+        try {
+            p = Stats.rankSum(data, labels);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return p;
     }
 

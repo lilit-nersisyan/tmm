@@ -23,6 +23,7 @@ public class ParsedFilesDirectory {
     private File nodeTableFile;
     private File fcMatFile;
     private HashMap<String, String> errorToolTips = new HashMap<>();
+    private boolean allValid = true;
 
     public File getFcMatFile() {
         return fcMatFile;
@@ -97,6 +98,7 @@ public class ParsedFilesDirectory {
     }
 
     public void setErrorToolTip(String item, String errorMessage) {
+        this.allValid = false;
         errorToolTips.put(item, errorMessage);
     }
 
@@ -104,5 +106,9 @@ public class ParsedFilesDirectory {
         if (errorToolTips.containsKey(item))
             return errorToolTips.get(item);
         return null;
+    }
+
+    public boolean isAllValid() {
+        return allValid;
     }
 }
