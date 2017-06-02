@@ -45,15 +45,22 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     private ParsedFilesDirectory parsedFilesDirectory;
     private boolean editingInput = true;
     private ImageIcon refreshIcon;
+    private ImageIcon tmmLogo;
     private String refreshIconName = "refresh_button.png";
+    private String tmmLogoName = "tmm_logo.png";
+    private Color myGreen = new Color(0, 188, 49);
+    private Color myRed = new Color(255, 0, 0);
+    private Color myBlue = new Color(21, 140, 186);
+
 
     public TMMPanel() throws Exception {
-        if (getPSFCPanel() == null) {
-            showMessageDialog("PSFC 1.1.3 not running! Install PSFC 1.1.3 before installing TMM.", JOptionPane.ERROR_MESSAGE);
-            throw new Exception("PSFC 1.1.3 not running! Install PSFC 1.1.3 before installing TMM.");
-        }
         psfcPanel = getPSFCPanel();
-        this.setPreferredSize(new Dimension(380, getHeight()));
+        if (psfcPanel == null) {
+//            showMessageDialog("PSFC 1.1.3 not running! Install PSFC 1.1.3 before installing TMM.", JOptionPane.ERROR_MESSAGE);
+            throw new Exception("PSFC 1.1.4 or higher not running! Install PSFC 1.1.4 or higher before installing TMM.");
+        }
+
+        this.setPreferredSize(new Dimension(600, 1000));
         loadProps();
         initComponents();
         setComponentProperties();
@@ -83,6 +90,14 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         return null;
     }
 
+    public ImageIcon getTMMLogo() {
+        if (tmmLogo == null) {
+            ClassLoader cl = TMMActivator.class.getClassLoader();
+            tmmLogo = new ImageIcon(cl.getResource(tmmLogoName));
+        }
+        return tmmLogo;
+    }
+
     private void showMessageDialog(String message, int option) {
         JOptionPane.showMessageDialog(TMMActivator.cytoscapeDesktopService.getJFrame(),
                 message, "TMM message dialog", option);
@@ -107,17 +122,22 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         for (; i < westPanel.getCytoPanelComponentCount(); i++) {
             Component component = westPanel.getComponentAt(i);
             if (component.getName() != null)
-                if (component.getName().equals("PSFC_1.1.3")) {
-                    psfcPanel = westPanel.getComponentAt(i);
+                if (component.getName().contains("PSFC")) {
+                    if (!component.getName().equals("PSFC_1.0.0") &&
+                            !component.getName().equals("PSFC_1.0.1") &&
+                            !component.getName().equals("PSFC_1.0.2") &&
+                            !component.getName().equals("PSFC_1.1.2") &&
+                            !component.getName().equals("PSFC_1.1.3"))
+                        psfcPanel = westPanel.getComponentAt(i);
                     break;
                 }
         }
 
 
         if (psfcPanel == null)
-            System.out.println("PSFC 1.1.3 Panel not found!");
+            System.out.println("PSFC 1.1.4 or higher Panel not found!");
         else
-            System.out.println("PSFC 1.1.3 component found: " + psfcPanel.getName());
+            System.out.println("PSFC 1.1.4 or higher component found: " + psfcPanel.getName());
         return psfcPanel;
     }
 
@@ -203,17 +223,18 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     public void setRunPSFDone(boolean runPSFDone) {
         this.runPSFDone = runPSFDone;
         if (runPSFDone)
-            jb_runPSF.setBackground(new Color(0, 188, 49));
+            jb_runPSF.setBorder(BorderFactory.createLineBorder(myGreen));
         else
-            jb_runPSF.setBackground(new Color(21, 140, 186));
+            jb_runPSF.setBorder(BorderFactory.createLineBorder(new Color(21, 140, 186)));
     }
 
     public void setAddFCDone(boolean addFCDone) {
         this.addFCDone = addFCDone;
         if (addFCDone)
-            jb_addFC.setBackground(new Color(0, 188, 49));
+            jb_addFC.setBorder(BorderFactory.createLineBorder(myGreen));
         else
-            jb_addFC.setBackground(new Color(21, 140, 186));
+            jb_addFC.setBorder(BorderFactory.createLineBorder(myBlue));
+//            jb_addFC.setBackground(new Color(21, 140, 186));
     }
 
     public boolean isGenerateReportDone() {
@@ -223,11 +244,15 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     public void setGenerateReportDone(boolean generateReportDone) {
         this.generateReportDone = generateReportDone;
         if (generateReportDone) {
-            jb_generateReport.setBackground(new Color(0, 188, 49));
-            jb_runAll.setBackground(new Color(0, 188, 49));
+            jb_generateReport.setBorder(BorderFactory.createLineBorder(myGreen));
+//            jb_generateReport.setBackground(new Color(0, 188, 49));
+            jb_runAll.setBorder(BorderFactory.createLineBorder(myGreen));
+//            jb_runAll.setBackground(new Color(0, 188, 49));
         } else {
-            jb_generateReport.setBackground(new Color(21, 140, 186));
-            jb_runAll.setBackground(new Color(21, 140, 186));
+            jb_generateReport.setBorder(BorderFactory.createLineBorder(myBlue));
+//            jb_generateReport.setBackground(new Color(21, 140, 186));
+            jb_runAll.setBorder(BorderFactory.createLineBorder(myBlue));
+//            jb_runAll.setBackground(new Color(21, 140, 186));
         }
     }
 
@@ -248,37 +273,43 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             //loop throgh tooltiperrors in parsefilesdirectory and set tooltips and colors
             if (expMatFile == null || !expMatFile.exists()) {
                 enable = false;
-                jb_chooseExpMatFile.setBackground(new java.awt.Color(255, 0, 0));
+                jb_chooseExpMatFile.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(255, 0, 0)));
+//                jb_chooseExpMatFile.setBackground(new java.awt.Color(255, 0, 0));
             } else {
                 String error = parsedFilesDirectory.getErrorToolTip(ParsedFilesDirectory.EXPMATFILE);
                 if (error == null) {
-                    jb_chooseExpMatFile.setBackground(new Color(0, 188, 49));
+                    jb_chooseExpMatFile.setBorder(BorderFactory.createLineBorder(new java.awt.Color(0, 188, 49)));
+//                    jb_chooseExpMatFile.setBackground(new Color(0, 188, 49));
                     jl_chosenExpMatFile.setToolTipText(expMatFile.getAbsolutePath());
                 } else {
-                    jb_chooseExpMatFile.setBackground(new java.awt.Color(255, 0, 0));
+                    jb_chooseExpMatFile.setBorder(BorderFactory.createLineBorder(new java.awt.Color(255, 0, 0)));
+//                    jb_chooseExpMatFile.setBackground(new java.awt.Color(255, 0, 0));
                     jb_chooseExpMatFile.setToolTipText(error);
                 }
                 String geneIdValid = parsedFilesDirectory.getErrorToolTip(ParsedFilesDirectory.GENEID);
 
                 if (geneIdValid == null) {
-                    jcb_geneID.setBorder(javax.swing.BorderFactory.createEtchedBorder(new Color(0, 188, 49), null));
+                    jcb_geneID.setBorder(BorderFactory.createEtchedBorder(new Color(0, 188, 49), null));
                     jcb_geneID.setToolTipText("");
                 } else {
                     enable = false;
                     jcb_geneID.setToolTipText(geneIdValid);
-                    jcb_geneID.setBorder(javax.swing.BorderFactory.createEtchedBorder(new Color(255, 0, 0), null));
+                    jcb_geneID.setBorder(BorderFactory.createEtchedBorder(new Color(255, 0, 0), null));
                 }
             }
             if (parentDir == null || !parentDir.exists()) {
                 enable = false;
-                jb_browseParentDir.setBackground(new Color(255, 0, 0));
+                jb_browseParentDir.setBorder(BorderFactory.createLineBorder(new java.awt.Color(255, 0, 0)));
+//                jb_browseParentDir.setBackground(new Color(255, 0, 0));
             } else {
                 String error = parsedFilesDirectory.getErrorToolTip(ParsedFilesDirectory.PARENTDIR);
                 if (error == null) {
-                    jb_browseParentDir.setBackground(new Color(0, 188, 49));
+                    jb_browseParentDir.setBorder(BorderFactory.createLineBorder(new java.awt.Color(0, 188, 49)));
+//                    jb_browseParentDir.setBackground(new Color(0, 188, 49));
                     jl_parentDir.setToolTipText(parentDir.getAbsolutePath());
                 } else {
-                    jb_browseParentDir.setBackground(new Color(255, 0, 0));
+                    jb_browseParentDir.setBorder(BorderFactory.createLineBorder(new java.awt.Color(255, 0, 0)));
+//                    jb_browseParentDir.setBackground(new Color(255, 0, 0));
                     jb_browseParentDir.setToolTipText(error);
                 }
             }
@@ -291,12 +322,14 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                 jtxt_iterationTitle.setToolTipText(error);
             }
         } else {
-            jb_chooseExpMatFile.setBackground(new Color(0, 188, 49));
-            jb_chooseExpMatFile.setToolTipText(expMatFile.getAbsolutePath());
+            jb_chooseExpMatFile.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 188, 49)));
+//            jb_chooseExpMatFile.setBackground(new Color(0, 188, 49));
+//            jb_chooseExpMatFile.setToolTipText(expMatFile.getAbsolutePath());
             jcb_geneID.setBorder(javax.swing.BorderFactory.createEtchedBorder(new Color(0, 188, 49), null));
             jcb_geneID.setToolTipText("");
-            jb_browseParentDir.setBackground(new Color(0, 188, 49));
-            jb_browseParentDir.setToolTipText(parentDir.getAbsolutePath());
+            jb_browseParentDir.setBorder(BorderFactory.createLineBorder(new java.awt.Color(0, 188, 49)));
+//            jb_browseParentDir.setBackground(new Color(0, 188, 49));
+//            jb_browseParentDir.setToolTipText(parentDir.getAbsolutePath());
             jtxt_iterationTitle.setBorder(BorderFactory.createLineBorder(new Color(0, 188, 49)));
             jtxt_iterationTitle.setToolTipText("");
         }
@@ -470,6 +503,8 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             bootCycles = 200;
         }
         jtxt_bootCycles.setText(bootCycles + "");
+
+        jl_tmmLogo.setIcon(getTMMLogo());
     }
 
     private ImageIcon getRefreshIcon() {
@@ -634,6 +669,21 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             }
         });
 
+        jb_downloadExamples.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_downloadExamplesActionPerformed(e);
+            }
+        });
+
+        jb_goToUserGuide.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_goToUserGuideActionPerformed(e);
+            }
+        });
+
+
     }
 
 
@@ -677,7 +727,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         enableButtons();
     }
 
-    private void jb_refreshActionPerformed(ActionEvent e){
+    private void jb_refreshActionPerformed(ActionEvent e) {
         setjcb_geneIDModel();
         enableButtons();
     }
@@ -730,6 +780,9 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
 
     private void jb_editActionPerformed(ActionEvent e) {
         editingInput = true;
+        addFCDone = false;
+        runPSFDone = false;
+        generateReportDone = false;
         enableButtons();
     }
 
@@ -981,12 +1034,40 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         vizSampleAction.actionPerformed(e);
     }
 
-    private void jb_webpageActionPerformed(ActionEvent e){
+    private void jb_webpageActionPerformed(ActionEvent e) {
         WebLoadAction webLoadAction = new WebLoadAction(TMMActivator.getWebPageUrl());
         webLoadAction.actionPerformed(e);
     }
 
-    private void initComponents(){
+    private void jb_downloadExamplesActionPerformed(ActionEvent e) {
+        WebLoadAction webLoadAction = new WebLoadAction(TMMActivator.getExamplesUrl());
+        webLoadAction.actionPerformed(e);
+    }
+
+    private void jb_goToUserGuideActionPerformed(ActionEvent e) {
+        WebLoadAction webLoadAction = new WebLoadAction(TMMActivator.getUserGuideUrl());
+        webLoadAction.actionPerformed(e);
+    }
+
+    private void initComponents() {
+        jtp_tmm = new javax.swing.JTabbedPane();
+        jsp_gettingStarted = new javax.swing.JScrollPane();
+        jtp_gettingStarted = new javax.swing.JPanel();
+        jb_goToUserGuide = new javax.swing.JButton();
+        jl_loadData = new javax.swing.JLabel();
+        jl_downloadExamples = new javax.swing.JLabel();
+        jsp_runTMM = new javax.swing.JScrollPane();
+        jtxt_runTMM = new javax.swing.JTextArea();
+        jl_runTMM = new javax.swing.JLabel();
+        jsp_loadData = new javax.swing.JScrollPane();
+        jtxt_loadData = new javax.swing.JTextArea();
+        jl_readUserGuide = new javax.swing.JLabel();
+        jsp_checkResults = new javax.swing.JScrollPane();
+        jtxt_checkResults = new javax.swing.JTextArea();
+        jb_downloadExamples = new javax.swing.JButton();
+        jl_checkResults = new javax.swing.JLabel();
+        jsp_setup = new javax.swing.JScrollPane();
+        jtp_setup = new javax.swing.JPanel();
         jp_filesAndTitles = new javax.swing.JPanel();
         jl_chosenExpMatFile = new javax.swing.JLabel();
         jl_parentDir = new javax.swing.JLabel();
@@ -1012,6 +1093,9 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jb_chooseTMMLabels = new javax.swing.JButton();
         jb_editTMMLabels = new javax.swing.JButton();
         jl_tmmLabelsFile = new javax.swing.JLabel();
+        jb_saveSettings = new javax.swing.JButton();
+        jsp_run = new javax.swing.JScrollPane();
+        jtp_run = new javax.swing.JPanel();
         jp_run = new javax.swing.JPanel();
         jb_runAll = new javax.swing.JButton();
         jb_addFC = new javax.swing.JButton();
@@ -1020,13 +1104,120 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jtxt_bootCycles = new javax.swing.JTextField();
         jl_bootstrap = new javax.swing.JLabel();
         jb_openReport = new javax.swing.JButton();
-        jb_webpage = new javax.swing.JButton();
         jp_visualization = new javax.swing.JPanel();
         jl_samples = new javax.swing.JLabel();
         jcb_samples = new javax.swing.JComboBox<>();
         jb_viz = new javax.swing.JButton();
-        jb_saveSettings = new javax.swing.JButton();
+        jsp_about = new javax.swing.JScrollPane();
+        jtp_about = new javax.swing.JPanel();
+        jb_webpage = new javax.swing.JButton();
+        jl_tmmLogo = new javax.swing.JLabel();
+        jscp_copyright = new javax.swing.JScrollPane();
+        jtxt_copyright = new javax.swing.JTextArea();
+        jl_title = new javax.swing.JLabel();
 
+        setMinimumSize(new java.awt.Dimension(444, 835));
+
+        jsp_gettingStarted.setHorizontalScrollBar(null);
+
+        jb_goToUserGuide.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
+        jb_goToUserGuide.setForeground(new java.awt.Color(102, 103, 114));
+        jb_goToUserGuide.setText("Go to the User Guide");
+        jb_goToUserGuide.setBorder(javax.swing.BorderFactory.createMatteBorder(1, 1, 1, 1, new java.awt.Color(51, 153, 0)));
+
+        jl_loadData.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
+        jl_loadData.setText("Load the data");
+
+        jl_downloadExamples.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
+        jl_downloadExamples.setText("Download datasets");
+
+        jtxt_runTMM.setColumns(20);
+        jtxt_runTMM.setLineWrap(true);
+        jtxt_runTMM.setRows(5);
+        jtxt_runTMM.setText("4. Go to Run tab of TMM \n4a. Click \"Run all at once\" \n4b. Generate report: click \"Open\" to see the report");
+        jsp_runTMM.setViewportView(jtxt_runTMM);
+
+        jl_runTMM.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
+        jl_runTMM.setText("Run TMM");
+
+        jtxt_loadData.setColumns(20);
+        jtxt_loadData.setLineWrap(true);
+        jtxt_loadData.setRows(5);
+        jtxt_loadData.setText("1. Unzip the downloaded example archive \n2. Go to File->Import->Network->File\nand load the *.xgmml file from the example folder\n3. Go to Setup tab of TMM \n3a. Parent Direcotory: choose a working directory\n3b. Exp matrix: select the expression matrix file from the example folder\n3c. Gene ID: Click the refresh button, and choose the \"entrez\" column \n3d. Click \"Done\"\n\n3e. Select \"Validation mode\" \n3f. Click  \"Choose file\" and select the tmm labels file from the example folder");
+        jsp_loadData.setViewportView(jtxt_loadData);
+
+        jl_readUserGuide.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
+        jl_readUserGuide.setText("After all, read the user guide :) ");
+
+        jtxt_checkResults.setColumns(20);
+        jtxt_checkResults.setLineWrap(true);
+        jtxt_checkResults.setRows(5);
+        jtxt_checkResults.setText("4c. Select the sample and click \"Viz\" to see the activity changes \n\n5. Go to your specified parent directory and see all the report files in \"Untitled_iteration\" folder (or other, if you've specified another iteration title). ");
+        jsp_checkResults.setViewportView(jtxt_checkResults);
+
+        jb_downloadExamples.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
+        jb_downloadExamples.setForeground(new java.awt.Color(102, 103, 114));
+        jb_downloadExamples.setText("Download example sets");
+        jb_downloadExamples.setBorder(javax.swing.BorderFactory.createMatteBorder(1, 1, 1, 1, new java.awt.Color(255, 204, 0)));
+
+        jl_checkResults.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
+        jl_checkResults.setText("Check out the results");
+
+        javax.swing.GroupLayout jtp_gettingStartedLayout = new javax.swing.GroupLayout(jtp_gettingStarted);
+        jtp_gettingStarted.setLayout(jtp_gettingStartedLayout);
+        jtp_gettingStartedLayout.setHorizontalGroup(
+                jtp_gettingStartedLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(jtp_gettingStartedLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(jtp_gettingStartedLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(jb_downloadExamples, javax.swing.GroupLayout.PREFERRED_SIZE, 354, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGroup(jtp_gettingStartedLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                                .addComponent(jsp_checkResults, javax.swing.GroupLayout.Alignment.LEADING)
+                                                .addGroup(jtp_gettingStartedLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addGroup(jtp_gettingStartedLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                                                .addComponent(jsp_runTMM)
+                                                                .addComponent(jsp_loadData, javax.swing.GroupLayout.Alignment.LEADING)
+                                                                .addGroup(jtp_gettingStartedLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                                        .addGroup(jtp_gettingStartedLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                                                                .addComponent(jb_goToUserGuide, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 356, Short.MAX_VALUE)
+                                                                                .addComponent(jl_loadData, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                                                        .addComponent(jl_downloadExamples, javax.swing.GroupLayout.PREFERRED_SIZE, 354, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                        .addComponent(jl_runTMM, javax.swing.GroupLayout.PREFERRED_SIZE, 333, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                                        .addComponent(jl_readUserGuide, javax.swing.GroupLayout.PREFERRED_SIZE, 333, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(jl_checkResults, javax.swing.GroupLayout.PREFERRED_SIZE, 333, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                                .addGap(113, 113, 113))
+        );
+        jtp_gettingStartedLayout.setVerticalGroup(
+                jtp_gettingStartedLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(jtp_gettingStartedLayout.createSequentialGroup()
+                                .addGap(7, 7, 7)
+                                .addComponent(jl_downloadExamples)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jb_downloadExamples, javax.swing.GroupLayout.PREFERRED_SIZE, 42, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(8, 8, 8)
+                                .addComponent(jl_loadData)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jsp_loadData, javax.swing.GroupLayout.PREFERRED_SIZE, 170, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(12, 12, 12)
+                                .addComponent(jl_runTMM)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jsp_runTMM, javax.swing.GroupLayout.PREFERRED_SIZE, 84, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(jl_checkResults)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jsp_checkResults, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(12, 12, 12)
+                                .addComponent(jl_readUserGuide)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jb_goToUserGuide, javax.swing.GroupLayout.PREFERRED_SIZE, 42, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(189, 189, 189))
+        );
+
+        jsp_gettingStarted.setViewportView(jtp_gettingStarted);
+
+        jtp_tmm.addTab("Getting started", jsp_gettingStarted);
+
+        jsp_setup.setHorizontalScrollBar(null);
 
         jp_filesAndTitles.setBorder(javax.swing.BorderFactory.createEtchedBorder());
 
@@ -1048,6 +1239,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jl_iterationTitle.setText("Iteration title");
 
         jb_browseParentDir.setText("Browse");
+        jb_browseParentDir.setBorder(null);
 
         jb_chooseExpMatFile.setText("Choose");
 
@@ -1111,10 +1303,6 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                                                 .addComponent(jb_refresh, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))))
                                         .addComponent(jsp_comment)
                                         .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
-                                                .addComponent(jb_edit, javax.swing.GroupLayout.PREFERRED_SIZE, 82, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                                .addComponent(jb_done, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                        .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
                                                 .addGroup(jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                                         .addComponent(jl_comment)
                                                         .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
@@ -1123,7 +1311,11 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                                                 .addComponent(jb_browseParentDir, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                                                 .addComponent(jl_chosenParentDir)))
-                                                .addGap(0, 0, Short.MAX_VALUE)))
+                                                .addGap(0, 0, Short.MAX_VALUE))
+                                        .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
+                                                .addComponent(jb_edit, javax.swing.GroupLayout.PREFERRED_SIZE, 82, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                                .addComponent(jb_done, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                 .addContainerGap())
         );
         jp_filesAndTitlesLayout.setVerticalGroup(
@@ -1132,11 +1324,11 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                 .addContainerGap()
                                 .addGroup(jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                         .addComponent(jl_parentDir)
-                                        .addComponent(jb_browseParentDir)
+                                        .addComponent(jb_browseParentDir, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addComponent(jl_chosenParentDir))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(jb_chooseExpMatFile)
+                                        .addComponent(jb_chooseExpMatFile, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addComponent(jl_chosenExpMatFile)
                                         .addComponent(jl_expMat))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -1153,10 +1345,10 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jsp_comment, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addComponent(jb_done, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(jb_edit, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                .addContainerGap())
+                                .addGroup(jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(jb_edit, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(jb_done, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         jp_modeAndLabels.setBorder(javax.swing.BorderFactory.createEtchedBorder());
@@ -1190,24 +1382,24 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jp_modeAndLabels.setLayout(jp_modeAndLabelsLayout);
         jp_modeAndLabelsLayout.setHorizontalGroup(
                 jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jp_modeAndLabelsLayout.createSequentialGroup()
-                                .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                        .addComponent(jrb_validationMode)
-                                        .addComponent(jrb_predictionMode))
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                         .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
-                                .addContainerGap()
                                 .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                                .addComponent(jrb_validationMode)
+                                                .addComponent(jrb_predictionMode))
                                         .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
-                                                .addComponent(jl_tmmLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 117, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addGap(29, 29, 29)
-                                                .addComponent(jl_tmmLabelsFile, javax.swing.GroupLayout.PREFERRED_SIZE, 172, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                        .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
-                                                .addComponent(jb_generateTMMLabels)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                                .addComponent(jb_chooseTMMLabels, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addGap(13, 13, 13)
-                                                .addComponent(jb_editTMMLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 94, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                                .addContainerGap()
+                                                .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
+                                                                .addComponent(jl_tmmLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 117, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                .addGap(29, 29, 29)
+                                                                .addComponent(jl_tmmLabelsFile, javax.swing.GroupLayout.PREFERRED_SIZE, 172, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                        .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
+                                                                .addComponent(jb_generateTMMLabels)
+                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                                                .addComponent(jb_chooseTMMLabels, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                .addGap(13, 13, 13)
+                                                                .addComponent(jb_editTMMLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 94, javax.swing.GroupLayout.PREFERRED_SIZE)))))
                                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jp_modeAndLabelsLayout.setVerticalGroup(
@@ -1229,23 +1421,60 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
+        jb_saveSettings.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
+        jb_saveSettings.setText("Save settings");
+        jb_saveSettings.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 102, 103)));
+
+        javax.swing.GroupLayout jtp_setupLayout = new javax.swing.GroupLayout(jtp_setup);
+        jtp_setup.setLayout(jtp_setupLayout);
+        jtp_setupLayout.setHorizontalGroup(
+                jtp_setupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jtp_setupLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(jtp_setupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                        .addGroup(jtp_setupLayout.createSequentialGroup()
+                                                .addGap(0, 0, Short.MAX_VALUE)
+                                                .addComponent(jb_saveSettings, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                        .addComponent(jp_modeAndLabels, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(jp_filesAndTitles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addGap(113, 113, 113))
+        );
+        jtp_setupLayout.setVerticalGroup(
+                jtp_setupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(jtp_setupLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addComponent(jp_filesAndTitles, javax.swing.GroupLayout.PREFERRED_SIZE, 303, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jp_modeAndLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jb_saveSettings, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        jsp_setup.setViewportView(jtp_setup);
+
+        jtp_tmm.addTab("Setup", jsp_setup);
+
+        jsp_run.setHorizontalScrollBar(null);
+
         jp_run.setBorder(javax.swing.BorderFactory.createEtchedBorder());
 
-        jb_runAll.setBackground(new java.awt.Color(0, 188, 49));
         jb_runAll.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
         jb_runAll.setText("Run all at once");
+        jb_runAll.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 188, 49)));
 
-        jb_addFC.setBackground(new java.awt.Color(21, 140, 186));
         jb_addFC.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         jb_addFC.setText("Add/update fold change values");
+        jb_addFC.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(21, 140, 186)));
+        jb_addFC.setPreferredSize(new java.awt.Dimension(129, 25));
 
-        jb_runPSF.setBackground(new java.awt.Color(21, 140, 186));
         jb_runPSF.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         jb_runPSF.setText("Run PSF");
+        jb_runPSF.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(21, 140, 186)));
 
-        jb_generateReport.setBackground(new java.awt.Color(21, 140, 186));
         jb_generateReport.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         jb_generateReport.setText("Generate report");
+        jb_generateReport.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(21, 140, 186)));
 
         jtxt_bootCycles.setText("200");
 
@@ -1253,20 +1482,21 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jl_bootstrap.setForeground(new java.awt.Color(21, 140, 186));
         jl_bootstrap.setText("Bootstrap");
 
-        jb_openReport.setBackground(new java.awt.Color(0, 188, 49));
         jb_openReport.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         jb_openReport.setText("Open");
+        jb_openReport.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 188, 49)));
+        jb_openReport.setPreferredSize(new java.awt.Dimension(35, 25));
 
         javax.swing.GroupLayout jp_runLayout = new javax.swing.GroupLayout(jp_run);
         jp_run.setLayout(jp_runLayout);
         jp_runLayout.setHorizontalGroup(
                 jp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(jp_runLayout.createSequentialGroup()
-                                .addGap(30, 30, 30)
+                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jp_runLayout.createSequentialGroup()
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addGroup(jp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                                         .addComponent(jb_addFC, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                         .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jp_runLayout.createSequentialGroup()
-                                                .addComponent(jb_runPSF, javax.swing.GroupLayout.PREFERRED_SIZE, 139, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(jb_runPSF, javax.swing.GroupLayout.PREFERRED_SIZE, 129, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                 .addComponent(jl_bootstrap)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -1276,32 +1506,27 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                                 .addGap(18, 18, 18)
                                                 .addComponent(jb_openReport, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE))
                                         .addComponent(jb_runAll, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 284, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addGap(39, 39, 39))
         );
         jp_runLayout.setVerticalGroup(
                 jp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jp_runLayout.createSequentialGroup()
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(jb_addFC)
-                                .addGap(18, 18, 18)
+                                .addContainerGap(19, Short.MAX_VALUE)
+                                .addComponent(jb_addFC, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(jp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGroup(jp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                .addComponent(jtxt_bootCycles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(jl_bootstrap))
+                                        .addComponent(jb_runPSF, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(jp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(jb_runPSF)
-                                        .addComponent(jtxt_bootCycles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addComponent(jl_bootstrap))
+                                        .addComponent(jb_generateReport, javax.swing.GroupLayout.PREFERRED_SIZE, 25, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(jb_openReport, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addGroup(jp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(jb_generateReport)
-                                        .addComponent(jb_openReport))
-                                .addGap(18, 18, 18)
-                                .addComponent(jb_runAll)
+                                .addComponent(jb_runAll, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addContainerGap())
         );
-
-        jb_webpage.setBackground(new java.awt.Color(255, 204, 0));
-        jb_webpage.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
-        jb_webpage.setForeground(new java.awt.Color(102, 103, 114));
-        jb_webpage.setText("Project webpage");
-        jb_webpage.setBorder(javax.swing.BorderFactory.createMatteBorder(1, 1, 1, 1, new java.awt.Color(255, 204, 0)));
 
         jp_visualization.setBorder(javax.swing.BorderFactory.createEtchedBorder());
 
@@ -1309,10 +1534,10 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jl_samples.setForeground(new java.awt.Color(21, 140, 186));
         jl_samples.setText("Samples");
 
-        jb_viz.setBackground(new java.awt.Color(21, 140, 186));
         jb_viz.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         jb_viz.setForeground(new java.awt.Color(0, 188, 49));
         jb_viz.setText("Viz");
+        jb_viz.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(21, 140, 186)));
 
         javax.swing.GroupLayout jp_visualizationLayout = new javax.swing.GroupLayout(jp_visualization);
         jp_visualization.setLayout(jp_visualizationLayout);
@@ -1325,7 +1550,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                 .addComponent(jcb_samples, javax.swing.GroupLayout.PREFERRED_SIZE, 183, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(18, 18, 18)
                                 .addComponent(jb_viz, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addContainerGap(16, Short.MAX_VALUE))
         );
         jp_visualizationLayout.setVerticalGroup(
                 jp_visualizationLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1338,9 +1563,90 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
-        jb_saveSettings.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
-        jb_saveSettings.setText("Save settings");
-        jb_saveSettings.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 102, 103)));
+        javax.swing.GroupLayout jtp_runLayout = new javax.swing.GroupLayout(jtp_run);
+        jtp_run.setLayout(jtp_runLayout);
+        jtp_runLayout.setHorizontalGroup(
+                jtp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(jtp_runLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(jtp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                        .addComponent(jp_run, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(jp_visualization, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addContainerGap(111, Short.MAX_VALUE))
+        );
+        jtp_runLayout.setVerticalGroup(
+                jtp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(jtp_runLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addComponent(jp_run, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(18, 18, 18)
+                                .addComponent(jp_visualization, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addContainerGap(438, Short.MAX_VALUE))
+        );
+
+        jsp_run.setViewportView(jtp_run);
+
+        jtp_tmm.addTab("Run", jsp_run);
+
+        jsp_about.setHorizontalScrollBar(null);
+
+        jb_webpage.setFont(new java.awt.Font("Tahoma", 1, 18)); // NOI18N
+        jb_webpage.setForeground(new java.awt.Color(102, 103, 114));
+        jb_webpage.setText("Project webpage");
+        jb_webpage.setBorder(javax.swing.BorderFactory.createMatteBorder(1, 1, 1, 1, new java.awt.Color(255, 204, 0)));
+
+        jl_tmmLogo.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+
+        jscp_copyright.setBorder(null);
+
+        jtxt_copyright.setBackground(new java.awt.Color(240, 240, 240));
+        jtxt_copyright.setColumns(20);
+        jtxt_copyright.setLineWrap(true);
+        jtxt_copyright.setRows(5);
+        jtxt_copyright.setText("TMM version 0.1 beta\n© 2017\nLilit Nersisyan, \nArsen Arakelyan \n\nGroup of Bioinformatics, \nInstitute of Molecular Biology NAS\nYerevan, Armenia \n\nLicensed under: \nGNU General Public License version 3.\n");
+        jtxt_copyright.setToolTipText("");
+        jtxt_copyright.setBorder(null);
+        jscp_copyright.setViewportView(jtxt_copyright);
+
+        jl_title.setFont(new java.awt.Font("Tahoma", 1, 16)); // NOI18N
+        jl_title.setForeground(new java.awt.Color(83, 129, 176));
+        jl_title.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        jl_title.setText("Telomere maintenance mechanisms ");
+
+        javax.swing.GroupLayout jtp_aboutLayout = new javax.swing.GroupLayout(jtp_about);
+        jtp_about.setLayout(jtp_aboutLayout);
+        jtp_aboutLayout.setHorizontalGroup(
+                jtp_aboutLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(jtp_aboutLayout.createSequentialGroup()
+                                .addGroup(jtp_aboutLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGroup(jtp_aboutLayout.createSequentialGroup()
+                                                .addGap(21, 21, 21)
+                                                .addGroup(jtp_aboutLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addComponent(jl_tmmLogo, javax.swing.GroupLayout.PREFERRED_SIZE, 343, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(jscp_copyright, javax.swing.GroupLayout.PREFERRED_SIZE, 343, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(jl_title, javax.swing.GroupLayout.PREFERRED_SIZE, 343, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                        .addGroup(jtp_aboutLayout.createSequentialGroup()
+                                                .addGap(86, 86, 86)
+                                                .addComponent(jb_webpage, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addContainerGap(117, Short.MAX_VALUE))
+        );
+        jtp_aboutLayout.setVerticalGroup(
+                jtp_aboutLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jtp_aboutLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addComponent(jl_title, javax.swing.GroupLayout.PREFERRED_SIZE, 46, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(jl_tmmLogo, javax.swing.GroupLayout.PREFERRED_SIZE, 190, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(18, 18, 18)
+                                .addComponent(jscp_copyright, javax.swing.GroupLayout.PREFERRED_SIZE, 232, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(33, 33, 33)
+                                .addComponent(jb_webpage, javax.swing.GroupLayout.PREFERRED_SIZE, 42, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addContainerGap(124, Short.MAX_VALUE))
+        );
+
+        jsp_about.setViewportView(jtp_about);
+
+        jtp_tmm.addTab("About", jsp_about);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         setLayout(layout);
@@ -1348,79 +1654,82 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                 layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(layout.createSequentialGroup()
                                 .addContainerGap()
-                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addGroup(layout.createSequentialGroup()
-                                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                                        .addComponent(jb_saveSettings, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                                                .addComponent(jp_visualization, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                                                .addGroup(layout.createSequentialGroup()
-                                                                        .addGap(72, 72, 72)
-                                                                        .addComponent(jb_webpage, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                                .addComponent(jp_filesAndTitles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                                                .addComponent(jp_run, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                                                .addGap(0, 0, Short.MAX_VALUE))
-                                        .addComponent(jp_modeAndLabels, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
-                                .addContainerGap())
+                                .addComponent(jtp_tmm, javax.swing.GroupLayout.DEFAULT_SIZE, 420, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
                 layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(layout.createSequentialGroup()
                                 .addContainerGap()
-                                .addComponent(jp_filesAndTitles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jp_modeAndLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(jb_saveSettings, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jp_run, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jp_visualization, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jb_webpage, javax.swing.GroupLayout.PREFERRED_SIZE, 42, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addComponent(jtp_tmm, javax.swing.GroupLayout.DEFAULT_SIZE, 726, Short.MAX_VALUE)
+                                .addContainerGap())
         );
     }
 
     // Variables declaration - do not modify
-    private javax.swing.JButton jb_webpage;
     private javax.swing.JButton jb_addFC;
     private javax.swing.JButton jb_browseParentDir;
     private javax.swing.JButton jb_chooseExpMatFile;
     private javax.swing.JButton jb_chooseTMMLabels;
     private javax.swing.JButton jb_done;
+    private javax.swing.JButton jb_downloadExamples;
     private javax.swing.JButton jb_edit;
     private javax.swing.JButton jb_editTMMLabels;
     private javax.swing.JButton jb_generateReport;
     private javax.swing.JButton jb_generateTMMLabels;
+    private javax.swing.JButton jb_goToUserGuide;
     private javax.swing.JButton jb_openReport;
+    private javax.swing.JButton jb_refresh;
     private javax.swing.JButton jb_runAll;
     private javax.swing.JButton jb_runPSF;
     private javax.swing.JButton jb_saveSettings;
-    private javax.swing.JButton jb_refresh;
     private javax.swing.JButton jb_viz;
+    private javax.swing.JButton jb_webpage;
     private javax.swing.JComboBox<String> jcb_geneID;
     private javax.swing.JComboBox<String> jcb_samples;
     private javax.swing.JLabel jl_bootstrap;
+    private javax.swing.JLabel jl_checkResults;
     private javax.swing.JLabel jl_chosenExpMatFile;
     private javax.swing.JLabel jl_chosenParentDir;
     private javax.swing.JLabel jl_comment;
+    private javax.swing.JLabel jl_downloadExamples;
     private javax.swing.JLabel jl_expMat;
     private javax.swing.JLabel jl_geneID;
     private javax.swing.JLabel jl_iterationTitle;
+    private javax.swing.JLabel jl_loadData;
     private javax.swing.JLabel jl_parentDir;
+    private javax.swing.JLabel jl_readUserGuide;
+    private javax.swing.JLabel jl_runTMM;
     private javax.swing.JLabel jl_samples;
+    private javax.swing.JLabel jl_title;
     private javax.swing.JLabel jl_tmmLabels;
     private javax.swing.JLabel jl_tmmLabelsFile;
+    private javax.swing.JLabel jl_tmmLogo;
     private javax.swing.JPanel jp_filesAndTitles;
     private javax.swing.JPanel jp_modeAndLabels;
     private javax.swing.JPanel jp_run;
     private javax.swing.JPanel jp_visualization;
     private javax.swing.JRadioButton jrb_predictionMode;
     private javax.swing.JRadioButton jrb_validationMode;
+    private javax.swing.JScrollPane jscp_copyright;
+    private javax.swing.JScrollPane jsp_about;
+    private javax.swing.JScrollPane jsp_checkResults;
     private javax.swing.JScrollPane jsp_comment;
+    private javax.swing.JScrollPane jsp_gettingStarted;
+    private javax.swing.JScrollPane jsp_loadData;
+    private javax.swing.JScrollPane jsp_run;
+    private javax.swing.JScrollPane jsp_runTMM;
+    private javax.swing.JScrollPane jsp_setup;
+    private javax.swing.JPanel jtp_about;
+    private javax.swing.JPanel jtp_gettingStarted;
+    private javax.swing.JPanel jtp_run;
+    private javax.swing.JPanel jtp_setup;
+    private javax.swing.JTabbedPane jtp_tmm;
     private javax.swing.JTextField jtxt_bootCycles;
+    private javax.swing.JTextArea jtxt_checkResults;
     private javax.swing.JTextArea jtxt_comment;
+    private javax.swing.JTextArea jtxt_copyright;
     private javax.swing.JTextField jtxt_iterationTitle;
+    private javax.swing.JTextArea jtxt_loadData;
+    private javax.swing.JTextArea jtxt_runTMM;
     // End of variables declaration
 }

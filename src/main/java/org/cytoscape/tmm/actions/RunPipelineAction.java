@@ -16,6 +16,7 @@ import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -99,6 +100,7 @@ public class RunPipelineAction extends AbstractCyAction {
                         if (samples == null)
                             throw new Exception("No samples specified. Run Add/Update FC values before running PSF");
                         taskMonitor.setStatusMessage("Running PSF");
+
                         Map<String, Object> args = new HashMap<>();
                         args.put("edgeTypeColumnName", "type");
                         String samplesArg = "";
@@ -140,40 +142,44 @@ public class RunPipelineAction extends AbstractCyAction {
                                     if (cancelled)
                                         break;
                                 }
-                                taskMonitor.setStatusMessage("Collecting results for backup");
-                                File itSummaryFile = new File(new File(tmmPanel.getParentDir(),
-                                        tmmPanel.getIterationTitle()),
-                                        "psf_summary.xls");
-                                boolean itSummaryFileOK = true;
-                                if (itSummaryFile.exists()) {
-                                    itSummaryFileOK = itSummaryFile.delete();
-                                }
-                                if (itSummaryFileOK) {
-                                    boolean fileInUse = true;
-                                    taskMonitor.setStatusMessage("Writing results to summary file");
-                                    while (fileInUse) {
-//                                    System.out.printf("summary file in use\n");
-                                        if (cancelled)
-                                            break;
-                                        fileInUse = !summaryFile.renameTo(itSummaryFile);
-                                    }
-                                    if (itSummaryFile.exists()) {
-                                        tmmPanel.setSummaryFile(itSummaryFile);
-                                        System.out.println("summary file size: " + itSummaryFile.length());
-                                        taskMonitor.setStatusMessage("Wrote the resulst to summary file "
-                                                + itSummaryFile.getAbsolutePath());
-                                    } else
-                                        throw new Exception("Run PSF was not successful. " +
-                                                "Could not find summary file " + itSummaryFile.getAbsolutePath());
 
-                                } else {
-                                    throw new Exception("File " + itSummaryFile.getAbsolutePath() + " is in use.");
+                                if (!cancelled) {
+                                    taskMonitor.setStatusMessage("Collecting results for backup");
+                                    File itSummaryFile = new File(new File(tmmPanel.getParentDir(),
+                                            tmmPanel.getIterationTitle()),
+                                            "psf_summary.xls");
+                                    boolean itSummaryFileOK = true;
+                                    if (itSummaryFile.exists()) {
+                                        itSummaryFileOK = itSummaryFile.delete();
+                                    }
+                                    if (itSummaryFileOK) {
+                                        boolean fileInUse = true;
+                                        taskMonitor.setStatusMessage("Writing results to summary file");
+                                        while (fileInUse) {
+//                                    System.out.printf("summary file in use\n");
+                                            if (cancelled)
+                                                break;
+                                            fileInUse = !summaryFile.renameTo(itSummaryFile);
+                                        }
+                                        if (itSummaryFile.exists()) {
+                                            tmmPanel.setSummaryFile(itSummaryFile);
+                                            System.out.println("summary file size: " + itSummaryFile.length());
+                                            taskMonitor.setStatusMessage("Wrote the results to summary file "
+                                                    + itSummaryFile.getAbsolutePath());
+                                        } else
+                                            throw new Exception("Run PSF was not successful. " +
+                                                    "Could not find summary file " + itSummaryFile.getAbsolutePath());
+
+                                    } else {
+                                        throw new Exception("File " + itSummaryFile.getAbsolutePath() + " is in use.");
+                                    }
                                 }
-                            } else{
+                            } else {
                                 throw new Exception("TMM Run PSF task not successful: problem with summary file");
                             }
                         }
-                        tmmPanel.setRunPSFDone(true);
+                        if(!cancelled)
+                            tmmPanel.setRunPSFDone(true);
                         tmmPanel.enableButtons();
                     }
                     if (generateReport && !cancelled) {
