@@ -1050,6 +1050,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     }
 
     private void initComponents() {
+
         jtp_tmm = new javax.swing.JTabbedPane();
         jsp_gettingStarted = new javax.swing.JScrollPane();
         jtp_gettingStarted = new javax.swing.JPanel();
@@ -1295,12 +1296,13 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                                         .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
                                                                 .addComponent(jb_chooseExpMatFile, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(jl_chosenExpMatFile, javax.swing.GroupLayout.PREFERRED_SIZE, 96, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                        .addComponent(jtxt_iterationTitle)
+                                                                .addComponent(jl_chosenExpMatFile, javax.swing.GroupLayout.PREFERRED_SIZE, 96, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                .addGap(0, 0, Short.MAX_VALUE))
                                                         .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
                                                                 .addComponent(jcb_geneID, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(jb_refresh, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                                                                .addComponent(jb_refresh, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                        .addComponent(jtxt_iterationTitle)))
                                         .addComponent(jsp_comment)
                                         .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
                                                 .addGroup(jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1344,11 +1346,11 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                 .addComponent(jl_comment)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jsp_comment, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGap(18, 18, 18)
                                 .addGroup(jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                         .addComponent(jb_edit, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addComponent(jb_done, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addContainerGap())
         );
 
         jp_modeAndLabels.setBorder(javax.swing.BorderFactory.createEtchedBorder());
@@ -1443,12 +1445,12 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                 jtp_setupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jtp_setupLayout.createSequentialGroup()
                                 .addContainerGap()
-                                .addComponent(jp_filesAndTitles, javax.swing.GroupLayout.PREFERRED_SIZE, 303, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jp_filesAndTitles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(62, 62, 62)
                                 .addComponent(jp_modeAndLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jb_saveSettings, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addContainerGap(136, Short.MAX_VALUE))
         );
 
         jsp_setup.setViewportView(jtp_setup);

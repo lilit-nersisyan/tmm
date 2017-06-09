@@ -47,6 +47,7 @@ public class TwoDPlotFactory {
     private HashMap<String, Integer> seriesIndex = new HashMap<>();
     private HashMap<String, HashMap<String, HashMap<String, Double>>> summaryMap;
     private HashMap<String, ArrayList<String>> seriesLabels = new HashMap<>();
+    private ArrayList<String> baseLabels = new ArrayList<>();
 
     private final SummaryFileHandler summaryFileHandler;
     private TMMLabels tmmLabels;
@@ -193,7 +194,7 @@ public class TwoDPlotFactory {
      * @throws Exception
      */
     private XYSeries get2DSeries() throws Exception {
-        XYSeries series = new XYSeries("Uknown TMM");
+        XYSeries series = new XYSeries("Uknown TMM", false);
         HashMap<String, Double> altScores = summaryMap.get(ALTKEY).get(SCORESKEY);
         HashMap<String, Double> telomeraseScores = summaryMap.get(TELOMERASEKEY).get(SCORESKEY);
 
@@ -252,10 +253,13 @@ public class TwoDPlotFactory {
             PlotManager.setSeriesItemLabels(plot, seriesLabels, tmmLabels);
         }
 
-        domainRange[1] = summaryFileHandler.getPSFRange(TELOMERASEKEY)[1];
-        rangeRange[1] = summaryFileHandler.getPSFRange(ALTKEY)[1];
+//        domainRange[1] = summaryFileHandler.getPSFRange(TELOMERASEKEY)[1];
+//        rangeRange[1] = summaryFileHandler.getPSFRange(ALTKEY)[1];
+        //tmm0.2
+        domainRange = summaryFileHandler.getPSFRange(TELOMERASEKEY);
+        rangeRange = summaryFileHandler.getPSFRange(ALTKEY);
         plot.getDomainAxis().setRange(domainRange[0] - .25, domainRange[1] + .25);
-        plot.getRangeAxis().setRange(rangeRange[0], rangeRange[1] + .25);
+        plot.getRangeAxis().setRange(rangeRange[0]-0.25, rangeRange[1] + .25);
     }
 
     /**
