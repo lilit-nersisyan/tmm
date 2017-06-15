@@ -4,7 +4,6 @@ import jsc.independentsamples.MannWhitneyMedianDifferenceCI;
 import jsc.independentsamples.MannWhitneyTest;
 import org.cytoscape.tmm.gui.DoubleFormatter;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.CategoryPlot;
@@ -12,8 +11,6 @@ import org.jfree.chart.renderer.category.BoxAndWhiskerRenderer;
 import org.jfree.chart.title.TextTitle;
 import org.jfree.data.statistics.BoxAndWhiskerCategoryDataset;
 import org.jfree.data.statistics.DefaultBoxAndWhiskerCategoryDataset;
-import org.jfree.data.xy.XYDataset;
-import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.ui.HorizontalAlignment;
 import org.jfree.ui.RectangleEdge;
 
@@ -115,17 +112,25 @@ public class BoxPlotFactory {
 
 
         try {
-            double[] test1 = medDiff(dataset, tmmKey, TMMLabels.A, TMMLabels.N);
-            double[] test2 = medDiff(dataset, tmmKey, TMMLabels.A, TMMLabels.T);
+            Double test1[] = new Double[]{Double.NaN, Double.NaN};
+            Double test2[] = new Double[]{Double.NaN, Double.NaN};
+
+            if(dataset.getRowKeys().contains(TMMLabels.A) && dataset.getRowKeys().contains(TMMLabels.N))
+                test1 = medDiff(dataset, tmmKey, TMMLabels.A, TMMLabels.N);
+
+            if(dataset.getRowKeys().contains(TMMLabels.A) && dataset.getRowKeys().contains(TMMLabels.T))
+                test2 = medDiff(dataset, tmmKey, TMMLabels.A, TMMLabels.T);
+
+
             boxplotStats.put(MD1, test1[0]);
             boxplotStats.put(p1, test1[1]);
             boxplotStats.put(MD2, test2[0]);
             boxplotStats.put(p2, test2[1]);
 
-            double diff1 = DoubleFormatter.formatDouble(test1[0]);
-            double p1 = DoubleFormatter.formatDouble(test1[1], 3);
-            double diff2 = DoubleFormatter.formatDouble(test2[0]);
-            double p2 = DoubleFormatter.formatDouble(test2[1], 3);
+            double diff1 = Double.isNaN(test1[0]) ? Double.NaN : DoubleFormatter.formatDouble(test1[0]);
+            double p1 = Double.isNaN(test1[1]) ? Double.NaN : DoubleFormatter.formatDouble(test1[1], 3);
+            double diff2 = Double.isNaN(test2[0]) ? Double.NaN : DoubleFormatter.formatDouble(test2[0]);
+            double p2 = Double.isNaN(test2[1]) ? Double.NaN : DoubleFormatter.formatDouble(test2[1], 3);
             TextTitle legendText = new TextTitle(formatLegend(p, diff1, p1, diff2, p2));
             TextTitle legendTitle = new TextTitle("Statistics");
             legendTitle.setPosition(RectangleEdge.BOTTOM);
@@ -242,7 +247,7 @@ public class BoxPlotFactory {
      * @param l2      the second category label
      * @return returns a double array of size two, where the first entry is the median difference, and the second entry is the (MannWhitney) p value of this difference
      */
-    private double[] medDiff(BoxAndWhiskerCategoryDataset dataset,
+    private Double[] medDiff(BoxAndWhiskerCategoryDataset dataset,
                              String tmmkey, String l1, String l2) {
         ArrayList<Double> dataList = new ArrayList<>();
         ArrayList<String> labelList = new ArrayList<>();
@@ -273,7 +278,7 @@ public class BoxPlotFactory {
         MannWhitneyTest mwt = new MannWhitneyTest(data1, data2);
         double p = mwt.getSP();
 
-        return new double[]{diff, p};
+        return new Double[]{diff, p};
     }
 
     private String formatLegend(double p, double diff1, double p1, double diff2, double p2) {
