@@ -26,8 +26,8 @@ import java.util.List;
  * samples with different TMM labels
  */
 public class BoxPlotFactory {
-    private String ALTKEY = "ALT";
-    private String TELOMERASEKEY = "Telomerase";
+    public static String ALTKEY = "ALT";
+    public static String TELOMERASEKEY = "Telomerase";
     private String SCORESKEY = "scores";
     public static String KWP = "kwp";
     public static String MD1 = "MD1";
@@ -41,7 +41,7 @@ public class BoxPlotFactory {
 
     private SummaryFileHandler summaryFileHandler;
     private TMMLabels tmmLabels;
-    private HashMap<String, Double> boxplotStats;
+    private HashMap<String, HashMap<String, Double>> boxplotStats; // tmmkey:stat:statValue
 
     /**
      * Basic constructor
@@ -55,9 +55,10 @@ public class BoxPlotFactory {
         summaryMap = summaryFileHandler.getSummaryMap();
         samples = summaryFileHandler.getSamples();
         labelSamplesMap = tmmLabels.getLabelSamplesMap();
+        boxplotStats = new HashMap<>();
     }
 
-    public HashMap<String, Double> getBoxplotStats() {
+    public HashMap<String, HashMap<String, Double>> getBoxplotStats() {
         return boxplotStats;
     }
 
@@ -106,32 +107,43 @@ public class BoxPlotFactory {
             return boxplot;
 
         // Statistics legends
-        boxplotStats = new HashMap<>();
+        HashMap<String, Double> thisBoxplotStats = new HashMap<>();
+        boxplotStats.put(tmmKey, thisBoxplotStats);
         double p = DoubleFormatter.formatDouble(kwt(dataset, tmmKey), 3);
-        boxplotStats.put(KWP, p);
+        thisBoxplotStats.put(KWP, p);
 
 
         try {
             Double test1[] = new Double[]{Double.NaN, Double.NaN};
             Double test2[] = new Double[]{Double.NaN, Double.NaN};
 
-            if(dataset.getRowKeys().contains(TMMLabels.A) && dataset.getRowKeys().contains(TMMLabels.N))
-                test1 = medDiff(dataset, tmmKey, TMMLabels.A, TMMLabels.N);
 
-            if(dataset.getRowKeys().contains(TMMLabels.A) && dataset.getRowKeys().contains(TMMLabels.T))
-                test2 = medDiff(dataset, tmmKey, TMMLabels.A, TMMLabels.T);
+            if(tmmKey.equals(ALTKEY)) {
+                if (dataset.getRowKeys().contains(TMMLabels.A) && dataset.getRowKeys().contains(TMMLabels.N))
+                    test1 = medDiff(dataset, tmmKey, TMMLabels.A, TMMLabels.N);
+
+                if (dataset.getRowKeys().contains(TMMLabels.A) && dataset.getRowKeys().contains(TMMLabels.T))
+                    test2 = medDiff(dataset, tmmKey, TMMLabels.A, TMMLabels.T);
+            } else {
+                if (dataset.getRowKeys().contains(TMMLabels.T) && dataset.getRowKeys().contains(TMMLabels.N))
+                    test1 = medDiff(dataset, tmmKey, TMMLabels.T, TMMLabels.N);
+
+                if (dataset.getRowKeys().contains(TMMLabels.T) && dataset.getRowKeys().contains(TMMLabels.A))
+                    test2 = medDiff(dataset, tmmKey, TMMLabels.T, TMMLabels.A);
+            }
 
 
-            boxplotStats.put(MD1, test1[0]);
-            boxplotStats.put(p1, test1[1]);
-            boxplotStats.put(MD2, test2[0]);
-            boxplotStats.put(p2, test2[1]);
+            thisBoxplotStats.put(MD1, test1[0]);
+            thisBoxplotStats.put(p1, test1[1]);
+            thisBoxplotStats.put(MD2, test2[0]);
+            thisBoxplotStats.put(p2, test2[1]);
 
             double diff1 = Double.isNaN(test1[0]) ? Double.NaN : DoubleFormatter.formatDouble(test1[0]);
             double p1 = Double.isNaN(test1[1]) ? Double.NaN : DoubleFormatter.formatDouble(test1[1], 3);
             double diff2 = Double.isNaN(test2[0]) ? Double.NaN : DoubleFormatter.formatDouble(test2[0]);
             double p2 = Double.isNaN(test2[1]) ? Double.NaN : DoubleFormatter.formatDouble(test2[1], 3);
-            TextTitle legendText = new TextTitle(formatLegend(p, diff1, p1, diff2, p2));
+            TextTitle legendText = new TextTitle(formatLegend(p, diff1, p1, diff2, p2,
+                    (tmmKey.equals(ALTKEY) ? tmmLabels.A : tmmLabels.T )));
             TextTitle legendTitle = new TextTitle("Statistics");
             legendTitle.setPosition(RectangleEdge.BOTTOM);
             legendTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
@@ -144,10 +156,10 @@ public class BoxPlotFactory {
             boxplot.addSubtitle(legendTitle);
 
         } catch (Exception e) {
-            boxplotStats.put(MD1, Double.NaN);
-            boxplotStats.put(p1, Double.NaN);
-            boxplotStats.put(MD2, Double.NaN);
-            boxplotStats.put(p2, Double.NaN);
+            thisBoxplotStats.put(MD1, Double.NaN);
+            thisBoxplotStats.put(p1, Double.NaN);
+            thisBoxplotStats.put(MD2, Double.NaN);
+            thisBoxplotStats.put(p2, Double.NaN);
             TextTitle legendText = new TextTitle("Could not compute pairwise stats. " +
                     "\nReason: " + e.getMessage());
             TextTitle legendTitle = new TextTitle("Statistics");
@@ -281,7 +293,7 @@ public class BoxPlotFactory {
         return new Double[]{diff, p};
     }
 
-    private String formatLegend(double p, double diff1, double p1, double diff2, double p2) {
+    private String formatLegend(double p, double diff1, double p1, double diff2, double p2, String plotType) {
         int[] cols = new int[]{20, 15, 10, 10, 5};
         String row1Col1 = "Overall p value:";
         String row1Space2 = "";
@@ -290,7 +302,11 @@ public class BoxPlotFactory {
         row1Space2 = spaces(space);
         String row1 = row1Col1 + row1Space2 + row1Col2;
 
-        String col1 = "ALT vs normal";
+        String col1;
+        if(plotType.equals(TMMLabels.A))
+            col1= "ALT vs norm";
+        else
+            col1 = "Tel-ase vs norm";
         String col2 = "Median Diff:";
         String col3 = diff1 + "";
         String col4 = "p value:";
@@ -302,7 +318,10 @@ public class BoxPlotFactory {
 
         String row2 = col1 + space12 + col2 + space23 + col3 + space34 + col4 + space45 + col5;
 
-        col1 = "ALT vs telomerase";
+        if(plotType.equals(TMMLabels.A))
+            col1 = "ALT vs Tel-ase";
+        else
+            col1 = "Tel-ase vs ALT";
         col2 = "Median Diff:";
         col3 = diff2 + "";
         col4 = "p value:";

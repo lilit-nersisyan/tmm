@@ -57,7 +57,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         psfcPanel = getPSFCPanel();
         if (psfcPanel == null) {
 //            showMessageDialog("PSFC 1.1.3 not running! Install PSFC 1.1.3 before installing TMM.", JOptionPane.ERROR_MESSAGE);
-            throw new Exception("PSFC 1.1.4 or higher not running! Install PSFC 1.1.4 or higher before installing TMM.");
+            throw new Exception("PSFC 1.1.6 or higher not running! Install PSFC 1.1.6 or higher before installing TMM.");
         }
 
         this.setPreferredSize(new Dimension(600, 1000));
@@ -127,7 +127,9 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                             !component.getName().equals("PSFC_1.0.1") &&
                             !component.getName().equals("PSFC_1.0.2") &&
                             !component.getName().equals("PSFC_1.1.2") &&
-                            !component.getName().equals("PSFC_1.1.3"))
+                            !component.getName().equals("PSFC_1.1.3") &&
+                            !component.getName().equals("PSFC_1.1.4") &&
+                            !component.getName().equals("PSFC_1.1.5"))
                         psfcPanel = westPanel.getComponentAt(i);
                     break;
                 }
@@ -135,9 +137,9 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
 
 
         if (psfcPanel == null)
-            System.out.println("PSFC 1.1.4 or higher Panel not found!");
+            System.out.println("PSFC 1.1.6 or higher not found!");
         else
-            System.out.println("PSFC 1.1.4 or higher component found: " + psfcPanel.getName());
+            System.out.println("PSFC 1.1.6 or higher found: " + psfcPanel.getName());
         return psfcPanel;
     }
 
@@ -442,7 +444,9 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             }
         }
         if (parentDir != null) {
-            jl_chosenParentDir.setText(parentDir.getName());
+            String parentDirText = parentDir.getName().length() > 17 ?
+                    parentDir.getName().substring(0,14) + "..." : parentDir.getName();
+            jl_chosenParentDir.setText(parentDirText);
             jl_chosenParentDir.setToolTipText(parentDir.getAbsolutePath());
         }
 
@@ -747,7 +751,9 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                 showMessageDialog("Selected directory does not exist!", JOptionPane.WARNING_MESSAGE);
             else {
                 parentDir = selectedDir;
-                jl_chosenParentDir.setText(parentDir.getName());
+                String parentDirText = parentDir.getName().length() > 17 ?
+                        parentDir.getName().substring(0,14) + "..." : parentDir.getName();
+                jl_chosenParentDir.setText(parentDirText);
                 jl_chosenParentDir.setToolTipText(parentDir.getAbsolutePath());
                 if (!parentDir.getAbsolutePath().equals(prevDir.getAbsolutePath())) {
                     addFCDone = runPSFDone = generateReportDone = false;
@@ -828,7 +834,9 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
 
     private void setTmmLabelsFile(File tmmLabelsFile) {
         if (tmmLabelsFile != null) {
-            jl_tmmLabelsFile.setText(tmmLabelsFile.getName());
+            String labelText = tmmLabelsFile.getName().length() > 20 ?
+                    tmmLabelsFile.getName().substring(0,17) + "..." : tmmLabelsFile.getName();
+            jl_tmmLabelsFile.setText(labelText);
             jl_tmmLabelsFile.setToolTipText(tmmLabelsFile.getAbsolutePath());
             jl_tmmLabelsFile.setForeground(new Color(0, 188, 49));
         } else {
@@ -1605,7 +1613,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jtxt_copyright.setColumns(20);
         jtxt_copyright.setLineWrap(true);
         jtxt_copyright.setRows(5);
-        jtxt_copyright.setText("TMM version 0.1 beta\n© 2017\nLilit Nersisyan, \nArsen Arakelyan \n\nGroup of Bioinformatics, \nInstitute of Molecular Biology NAS\nYerevan, Armenia \n\nLicensed under: \nGNU General Public License version 3.\n");
+        jtxt_copyright.setText("TMM version 0.4 beta\n© 2017\nLilit Nersisyan, \nArsen Arakelyan \n\nGroup of Bioinformatics, \nInstitute of Molecular Biology NAS\nYerevan, Armenia \n\nLicensed under: \nGNU General Public License version 3.\n");
         jtxt_copyright.setToolTipText("");
         jtxt_copyright.setBorder(null);
         jscp_copyright.setViewportView(jtxt_copyright);

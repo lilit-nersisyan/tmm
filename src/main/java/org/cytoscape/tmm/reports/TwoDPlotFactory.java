@@ -52,6 +52,7 @@ public class TwoDPlotFactory {
     private final SummaryFileHandler summaryFileHandler;
     private TMMLabels tmmLabels;
     private double accuracy;
+    private boolean drawPointLabels = true;
 
 
     /**
@@ -83,6 +84,15 @@ public class TwoDPlotFactory {
         samples = summaryFileHandler.getSamples();
     }
 
+
+    /**
+     * If drawPointLables is set to true (default), the points will have labels on the plot,
+     * and not otherwise.
+     * @param drawPointLabels
+     */
+    public void setDrawPointLabels(boolean drawPointLabels) {
+        this.drawPointLabels = drawPointLabels;
+    }
 
     /**
      * Creates a 2D scatter plot.
@@ -247,10 +257,31 @@ public class TwoDPlotFactory {
 
     private void renderPlot(XYPlot plot) {
         PlotManager.renderBase(plot);
-        if(!labeled)
-            PlotManager.setBaseItemLabels(plot, samples);
-        else{
-            PlotManager.setSeriesItemLabels(plot, seriesLabels, tmmLabels);
+        if(drawPointLabels) {
+            if (!labeled)
+                PlotManager.setBaseItemLabels(plot, samples);
+            else {
+                PlotManager.setSeriesItemLabels(plot, seriesLabels, tmmLabels);
+            }
+        } else {
+            if (!labeled) {
+                ArrayList<String> noSamples = new ArrayList<>();
+                for(String s : samples)
+                    noSamples.add("");
+                PlotManager.setBaseItemLabels(plot, noSamples);
+            }
+            else {
+                HashMap<String, ArrayList<String>> seriesNoLabels = new HashMap<>();
+                for(String tmmk : seriesLabels.keySet()){
+                    ArrayList<String> nolabarray = new ArrayList<>();
+                    ArrayList<String> labarray = seriesLabels.get(tmmk);
+                    for(String v : labarray){
+                        nolabarray.add("");
+                    }
+                    seriesNoLabels.put(tmmk, nolabarray);
+                }
+                PlotManager.setSeriesItemLabels(plot, seriesNoLabels, tmmLabels);
+            }
         }
 
 //        domainRange[1] = summaryFileHandler.getPSFRange(TELOMERASEKEY)[1];
@@ -258,8 +289,14 @@ public class TwoDPlotFactory {
         //tmm0.2
         domainRange = summaryFileHandler.getPSFRange(TELOMERASEKEY);
         rangeRange = summaryFileHandler.getPSFRange(ALTKEY);
-        plot.getDomainAxis().setRange(domainRange[0] - .25, domainRange[1] + .25);
-        plot.getRangeAxis().setRange(rangeRange[0]-0.25, rangeRange[1] + .25);
+        double xMargin = (domainRange[1] - domainRange[0])/10;
+        if(xMargin < 0.1)
+            xMargin = 0.1;
+        double yMargin = (rangeRange[1] - rangeRange[0])/10;
+        if(yMargin < 0.1)
+            yMargin = 0.1;
+        plot.getDomainAxis().setRange(domainRange[0] - xMargin, domainRange[1] + xMargin);
+        plot.getRangeAxis().setRange(rangeRange[0]-yMargin, rangeRange[1] + yMargin);
     }
 
     /**

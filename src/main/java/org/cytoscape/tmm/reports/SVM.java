@@ -208,32 +208,46 @@ public class SVM {
         else
             v = (up + low) / 2;
 
+        //After counting the h  and v, we should re-iterate the classification,
+        // since sometimes the SVM will classify points with low ALT values as ALT positive
+        // and those with high ALT values as ALT negative. So we will switch in the following lines.
+        for (int i = 0; i < dataSet.getSampleSize(); i++) {
+            DataPoint dataPoint = dataSet.getDataPoint(i);
+            int truth = dataSet.getDataPointCategory(i);
+            int predicted;
+            if (dataSet.getPredicting().getOptionName(1).equals(ALTOPTION))
+                predicted = classify(dataPoint, h);
+            else
+                predicted = classify(dataPoint, v);
+            if (dataSet.getPredicting().getOptionName(1).equals(ALTOPTION))
+                predictionTable[i][0] = (predicted != 0);
+            else
+                predictionTable[i][1] = (predicted != 0);
+            if (predicted == 0)
+                values0.add(dataPoint.getNumericalValues().get(0));
+            else
+                values1.add(dataPoint.getNumericalValues().get(0));
+            if (predicted != truth) {
+                errors++;
+                confusionMatrix[truth][1 - truth] += 1;
+            } else {
+                confusionMatrix[truth][truth] += 1;
+            }
+            System.out.println(i + "| True Class: " + truth + ", Predicted: " + predicted );
+        }
+
+
         System.out.println(errors + " errors were made, " + 100.0 * errors / dataSet.getSampleSize() + "% error rate");
 
-        // Java reflection is implemented here, since the b value of the classifier
-        // has private access.
-      /*  Class classifierClass = classifier.getClass();
-        try {
-            Field bField = getField(classifierClass, "b");
-            bField.setAccessible(true);
-            if (dataSet.getPredicting().getOptionName(1).equals(ALTOPTION))
-                h = (double) bField.get(classifier);
-            else
-                v = (double) bField.get(classifier);
-        } catch (NoSuchFieldException e) {
-            throw new NoSuchFieldException("Problem retrieving the bias value from the classifier when using java reflection. " +
-                    "There is no field named \"b\" in the classifier class "
-                    + classifierClass.getCanonicalName());
-        } catch (IllegalAccessException e) {
-            throw new IllegalAccessException("Problem retrieving the bias value from the classifier when using java reflection. " +
-                    "Illegal access to field \"b\" in the classifier class "
-                    + classifierClass.getCanonicalName());
-        }*/
+// I don't know what this is: useless staff
+//        if (dataSet.getPredicting().getOptionName(1).equals(ALTOPTION)) {
+//            classifier.supportsWeightedData();
+//        } else
+//            classifier.supportsWeightedData();
+    }
 
-        if (dataSet.getPredicting().getOptionName(1).equals(ALTOPTION)) {
-            classifier.supportsWeightedData();
-        } else
-            classifier.supportsWeightedData();
+    private int classify(DataPoint datapoint, double threshold){
+        return datapoint.getNumericalValues().get(0) >= threshold? 1 : 0;
     }
 
     /**

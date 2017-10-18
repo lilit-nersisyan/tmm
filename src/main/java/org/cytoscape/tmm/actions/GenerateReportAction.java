@@ -12,6 +12,7 @@ import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
 import org.jfree.chart.JFreeChart;
 
+import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -36,7 +37,7 @@ public class GenerateReportAction extends AbstractCyAction {
     private SummaryFileHandler summaryFileHandler;
     private TMMLabels tmmLabels;
     private SVM svm;
-    private HashMap<String, Double> boxplotStats;
+    private HashMap<String, HashMap<String, Double>> boxplotStats;
     private int bootCycles;
     private ParsedFilesDirectory parsedFilesDirectory;
 
@@ -180,6 +181,8 @@ public class GenerateReportAction extends AbstractCyAction {
                     // finished with twoDplots (without svm)
                     JFreeChart twoDChart = null;
                     twoDChart = twoDPlotFactory.create2DPlot();
+                    twoDPlotFactory.setDrawPointLabels(false);
+                    JFreeChart twoDChart_woLabels = twoDPlotFactory.create2DPlot();
                     if (tmmLabels != null) {
                         svm = new SVM(summaryFileHandler, tmmLabels);
                         taskMonitor.setStatusMessage("Running SVM");
@@ -187,8 +190,13 @@ public class GenerateReportAction extends AbstractCyAction {
                         twoDPlotFactory.setALTThreshold(twoDChart, svm.getH());
                         twoDPlotFactory.setTelomeraseThreshold(twoDChart, svm.getV());
                         twoDPlotFactory.setAccuracy(twoDChart, svm.getAccuracy());
+
+                        twoDPlotFactory.setALTThreshold(twoDChart_woLabels, svm.getH());
+                        twoDPlotFactory.setTelomeraseThreshold(twoDChart_woLabels, svm.getV());
+                        twoDPlotFactory.setAccuracy(twoDChart_woLabels, svm.getAccuracy());
                     }
                     charts.add(twoDChart);
+                    charts.add(twoDChart_woLabels);
                 } catch (Exception e) {
                     throw new Exception("Could not generate 2D plots: " + e.getMessage());
                 }
@@ -293,18 +301,36 @@ public class GenerateReportAction extends AbstractCyAction {
                     firstPage.add(content("Classification accuracy:      " + DoubleFormatter.formatDouble(svm.getAccuracy())));
                     firstPage.add(header("Median differences and p values"));
 
-                    firstPage.add(content("Overall p value (Kruskal-Wallis rank sum test):      "
+                    String tmmkey = BoxPlotFactory.ALTKEY;
+                    HashMap<String, Double> thisBoxplotStats = boxplotStats.get(tmmkey);
+                    firstPage.add(content("\nALT PSF: overall p value (Kruskal-Wallis rank sum test):      "
                             + DoubleFormatter.formatDouble(
-                                    boxplotStats.get(BoxPlotFactory.KWP),3)));
+                                    thisBoxplotStats.get(BoxPlotFactory.KWP),3)));
 
-                    firstPage.add(content("ALT versus normal:      Median difference:      "
-                            + DoubleFormatter.formatDouble(boxplotStats.get(BoxPlotFactory.MD1), 3)
+                    firstPage.add(content("ALT versus norm:      Median difference:      "
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.MD1), 3)
                             + "      p value      "
-                            + DoubleFormatter.formatDouble(boxplotStats.get(BoxPlotFactory.p1), 3)));
-                    firstPage.add(content("ALT versus telomerase      Median difference:      "
-                            + DoubleFormatter.formatDouble(boxplotStats.get(BoxPlotFactory.MD2),3)
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.p1), 3)));
+                    firstPage.add(content("ALT versus Tel-ase:      Median difference:      "
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.MD2),3)
                             + "      p value      "
-                            + DoubleFormatter.formatDouble(boxplotStats.get(BoxPlotFactory.p2),3)));
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.p2),3)));
+
+
+                    tmmkey = BoxPlotFactory.TELOMERASEKEY;
+                    thisBoxplotStats = boxplotStats.get(tmmkey);
+                    firstPage.add(content("\nTel-ase PSF: overall p value (Kruskal-Wallis rank sum test):      "
+                            + DoubleFormatter.formatDouble(
+                            thisBoxplotStats.get(BoxPlotFactory.KWP),3)));
+
+                    firstPage.add(content("Tel-ase versus norm:      Median difference:      "
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.MD1), 3)
+                            + "      p value      "
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.p1), 3)));
+                    firstPage.add(content("Tel-ase versus ALT:      Median difference:      "
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.MD2),3)
+                            + "      p value      "
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.p2),3)));
                 }
             }
             return firstPage;

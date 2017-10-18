@@ -18,7 +18,7 @@
     <artifactId>tmm</artifactId>
     <packaging>bundle</packaging>
     <name>TMM</name>
-    <version>0.3</version>
+    <version>0.4</version>
 
     <build>
         <plugins>
@@ -55,7 +55,7 @@
                         <Embed-Dependency><!--!*log4j-->*;scope=!provided|test;groupId=!org.cytoscape</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                         <Import-Package>*;resolution:=optional</Import-Package>
-                        <Cytoscape-App-Dependencies>PSFC;1.1.4</Cytoscape-App-Dependencies>
+                        <Cytoscape-App-Dependencies>PSFC;1.1.6</Cytoscape-App-Dependencies>
                     </instructions>
                 </configuration>
             </plugin>
