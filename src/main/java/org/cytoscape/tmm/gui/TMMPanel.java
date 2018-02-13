@@ -10,6 +10,7 @@ import org.cytoscape.tmm.TMMActivator;
 import org.cytoscape.tmm.actions.*;
 import org.cytoscape.tmm.processing.ExpMatFileHandler;
 import org.cytoscape.tmm.processing.ParsedFilesDirectory;
+import org.cytoscape.tmm.reports.GroupLabels;
 import org.cytoscape.tmm.reports.TMMLabels;
 
 import javax.swing.*;
@@ -17,6 +18,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
+import java.security.acl.Group;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
@@ -39,7 +41,11 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     private boolean generateReportDone;
     private File summaryFile;
     private File reportFile;
-    private File tmmLabelsFile;
+    private File tmmLabelsFile = null;
+    private File groupLabelsFile = null;
+    private File groupColorsFile = null;
+    private boolean isGroupLabelsSet = false;
+    private GroupLabels groupLabels = null;
     private ExpMatFileHandler expMatFileHandler;
     private boolean expMatFileValid = false;
     private ParsedFilesDirectory parsedFilesDirectory;
@@ -51,6 +57,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     private Color myGreen = new Color(0, 188, 49);
     private Color myRed = new Color(255, 0, 0);
     private Color myBlue = new Color(21, 140, 186);
+
 
 
     public TMMPanel() throws Exception {
@@ -162,6 +169,10 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
 
     public File getTmmLabelsFile() {
         return tmmLabelsFile;
+    }
+
+    public File getGroupLabelsFile() {
+        return groupLabelsFile;
     }
 
     public boolean isValidationMode() {
@@ -356,6 +367,8 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jb_generateReport.setEnabled(!editingInput);
         jb_openReport.setEnabled(!editingInput);
         jb_runAll.setEnabled(!editingInput);
+        jb_setGroups.setEnabled(!editingInput);
+        jb_editGroups.setEnabled(!editingInput);
 
         if (!editingInput) {
 
@@ -364,6 +377,33 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             jb_chooseTMMLabels.setEnabled(enableValidationButtons);
             jb_editTMMLabels.setEnabled(enableValidationButtons
                     && tmmLabelsFile != null && tmmLabelsFile.exists());
+
+            if(!enableValidationButtons) {
+                jb_generateGroupLabelsFile.setEnabled(!isGroupLabelsSet);
+                jb_chooseGroupLabelsFile.setEnabled(!isGroupLabelsSet);
+                jb_editGroupLabels.setEnabled(!isGroupLabelsSet);
+
+                jb_generateGroupColorsFile.setEnabled(!isGroupLabelsSet && (groupLabelsFile != null));
+                jb_chooseGroupColorsFile.setEnabled(!isGroupLabelsSet && (groupLabelsFile != null));
+                jb_editGroupColors.setEnabled(!isGroupLabelsSet && (groupLabelsFile != null));
+
+                jb_setGroups.setEnabled(!isGroupLabelsSet);
+                jb_editGroups.setEnabled(isGroupLabelsSet);
+            } else {
+                jb_generateGroupLabelsFile.setEnabled(false);
+                jb_chooseGroupLabelsFile.setEnabled(false);
+                jb_editGroupLabels.setEnabled(false);
+
+                jb_generateGroupColorsFile.setEnabled(false);
+                jb_chooseGroupColorsFile.setEnabled(false);
+                jb_editGroupColors.setEnabled(false);
+
+                jb_setGroups.setEnabled(false);
+                jb_editGroups.setEnabled(false);
+            }
+
+
+
 
             jb_addFC.setEnabled(enable);
             jb_runPSF.setEnabled(enable);
@@ -388,6 +428,12 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             jb_generateTMMLabels.setEnabled(false);
             jb_chooseTMMLabels.setEnabled(false);
             jb_editTMMLabels.setEnabled(false);
+            jb_generateGroupLabelsFile.setEnabled(false);
+            jb_chooseGroupLabelsFile.setEnabled(false);
+            jb_editGroupLabels.setEnabled(false);
+            jb_generateGroupColorsFile.setEnabled(false);
+            jb_chooseGroupColorsFile.setEnabled(false);
+            jb_editGroupColors.setEnabled(false);
             jb_saveSettings.setEnabled(false);
             jb_addFC.setEnabled(false);
             jb_runPSF.setEnabled(false);
@@ -445,7 +491,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         }
         if (parentDir != null) {
             String parentDirText = parentDir.getName().length() > 17 ?
-                    parentDir.getName().substring(0,14) + "..." : parentDir.getName();
+                    parentDir.getName().substring(0, 14) + "..." : parentDir.getName();
             jl_chosenParentDir.setText(parentDirText);
             jl_chosenParentDir.setToolTipText(parentDir.getAbsolutePath());
         }
@@ -480,8 +526,16 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             property = (String) TMMActivator.getTMMProps().get(ETMMProps.TMMLABELSFILE.getName());
             if (property != null && new File(property).exists())
                 this.tmmLabelsFile = new File(property);
-        } else
+        } else {
             jrb_predictionMode.setSelected(true);
+            property = (String) TMMActivator.getTMMProps().get(ETMMProps.GROUPLABELSFILE.getName());
+            if (property != null && new File(property).exists())
+                this.groupLabelsFile = new File(property);
+
+            property = (String) TMMActivator.getTMMProps().get(ETMMProps.GROUPCOLORSFILE.getName());
+            if (property != null && new File(property).exists())
+                this.groupColorsFile = new File(property);
+        }
 
         // tmmlabel
         property = (String) TMMActivator.getTMMProps().get(ETMMProps.TMMLABELSFILE.getName());
@@ -589,10 +643,39 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             }
         });
 
+        jb_generateGroupLabelsFile.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_generateGroupLabelsFileActionPerformed(e);
+            }
+        });
+
+        jb_generateGroupColorsFile.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_generateGroupColorsFileActionPerformed(e);
+            }
+        });
+
+
         jb_generateTMMLabels.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 jb_generateTMMLabelsActionPerformed(e);
+            }
+        });
+
+        jb_chooseGroupLabelsFile.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_chooseGroupLabelsFileActionPerformed(e);
+            }
+        });
+
+        jb_chooseGroupColorsFile.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_chooseGroupColorsFileActionPerformed(e);
             }
         });
 
@@ -603,12 +686,40 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             }
         });
 
+        jb_editGroupLabels.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_editGroupLabelsActionPerformed(e);
+            }
+        });
+
+        jb_editGroupColors.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_editGroupColorsActionPerformed(e);
+            }
+        });
+
+        jb_setGroups.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_setGroupsActionPerformed(e);
+            }
+        });
+
+        jb_editGroups.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jb_editGroupsActionPerformed(e);
+            }
+        });
         jb_editTMMLabels.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 jb_editTMMLabelsActionPerformed(e);
             }
         });
+
 
         jb_addFC.addActionListener(new ActionListener() {
             @Override
@@ -752,7 +863,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
             else {
                 parentDir = selectedDir;
                 String parentDirText = parentDir.getName().length() > 17 ?
-                        parentDir.getName().substring(0,14) + "..." : parentDir.getName();
+                        parentDir.getName().substring(0, 14) + "..." : parentDir.getName();
                 jl_chosenParentDir.setText(parentDirText);
                 jl_chosenParentDir.setToolTipText(parentDir.getAbsolutePath());
                 if (!parentDir.getAbsolutePath().equals(prevDir.getAbsolutePath())) {
@@ -818,6 +929,22 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     }
 
     private void jrb_predictionModeActionPerformed() {
+        String property = (String) TMMActivator.getTMMProps().get(ETMMProps.GROUPLABELSFILE.getName());
+        if (property != null && new File(property).exists()) {
+            this.groupLabelsFile = new File(property);
+            setGroupLabelsFile(groupLabelsFile);
+        } else {
+            setGroupLabelsFile(null);
+        }
+
+        property = (String) TMMActivator.getTMMProps().get(ETMMProps.GROUPCOLORSFILE.getName());
+        if (property != null && new File(property).exists()) {
+            this.groupColorsFile = new File(property);
+            setGroupColorsFile(groupColorsFile);
+        } else {
+            setGroupColorsFile(null);
+        }
+
         enableButtons();
     }
 
@@ -832,10 +959,305 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         enableButtons();
     }
 
+    /**
+     * Sets the group labels file as a field and updates the labels and tooltip texts accordingly.
+     * If the file is null the texts are updated with "No file chosen" label
+     *
+     * @param groupLabelsFile
+     */
+    private void setGroupLabelsFile(File groupLabelsFile) {
+        if (groupLabelsFile != null) {
+            String labelText = groupLabelsFile.getName().length() > 20 ?
+                    groupLabelsFile.getName().substring(0, 17) + "..." : groupLabelsFile.getName();
+            jl_groupLabelsFile.setText(labelText);
+            jl_groupLabelsFile.setToolTipText(groupLabelsFile.getAbsolutePath());
+            jl_groupLabelsFile.setForeground(new Color(0, 188, 49));
+        } else {
+            jl_groupLabelsFile.setText("No file chosen");
+            jl_groupLabelsFile.setForeground(new Color(255, 0, 0));
+        }
+
+    }
+
+    /**
+     * Creates a new instance of Grouplabels class and assigns it to the respective field.
+     * If groupLables file is not set, the GroupLables object is constructed
+     * based on samples and default group assignment.
+     * Otherwise, the custom group labels from the GroupLablesFile are parsed.
+     * If groupColorsFile is also specified, the default color palette is replaced by the custom one.
+     *
+     * If any of the files is invalid, the groupLabels field will be assigned the value of null.
+     *
+     */
+    private void compileGroupLabels() {
+        groupLabels = new GroupLabels(samples);
+        if (groupLabelsFile != null)
+            try {
+                groupLabels.setGroupLabels(groupLabelsFile);
+            } catch (Exception e) {
+                showMessageDialog("Invalid group labels file: " +
+                        e.getMessage(), JOptionPane.ERROR_MESSAGE);
+                groupLabels = null;
+            }
+        if (groupColorsFile != null)
+            try {
+                groupLabels.setGroupColors(groupColorsFile);
+            } catch (Exception e) {
+                showMessageDialog("Invalid group colors file: " +
+                        e.getMessage(), JOptionPane.ERROR_MESSAGE);
+                groupLabels = null;
+            }
+    }
+
+    /**
+     * A simple getter for the GroupLabels field.
+     * @return groupLabel field or null if the field is null
+     */
+    public GroupLabels getGroupLabels(){
+        return groupLabels;
+    }
+
+    /**
+     * Sets the group colors file as a field and updates the labels and tooltip texts accordingly.
+     * If the file is null the texts are updated with "No file chosen" label
+     *
+     * @param groupColorsFile
+     */
+    private void setGroupColorsFile(File groupColorsFile) {
+        if (groupColorsFile != null) {
+            String labelText = groupColorsFile.getName().length() > 20 ?
+                    groupColorsFile.getName().substring(0, 17) + "..." : groupColorsFile.getName();
+            jl_groupColorsFile.setText(labelText);
+            jl_groupColorsFile.setToolTipText(groupColorsFile.getAbsolutePath());
+            jl_groupColorsFile.setForeground(new Color(0, 188, 49));
+        } else {
+            jl_groupColorsFile.setText("No file chosen");
+            jl_groupColorsFile.setForeground(new Color(255, 0, 0));
+        }
+
+    }
+
+
+    private void jb_generateGroupColorsFileActionPerformed(ActionEvent e) {
+        if (samples == null) {
+            samples = parsedFilesDirectory.getExpMatFileHandler().getSamples();
+            System.out.println(" samples was null: replaced from parsedFilesDirecotyr. " +
+                    "this should not have occcured though.");
+        }
+
+        this.groupColorsFile = null;
+        compileGroupLabels();
+        if(groupLabels == null) {
+            //we should not reach here
+            showMessageDialog("Problem parsing group labels. \nPlease, set the group labels file again.",
+                     JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        OpenFileChooserAction openFileChooserAction =
+                new OpenFileChooserAction("Write Group colors filename", false);
+        openFileChooserAction.actionPerformed(e);
+        groupColorsFile = openFileChooserAction.getSelectedFile();
+
+        //in case the file specified by the user already exists
+        if (groupColorsFile.exists()) {
+            String valid = groupLabels.isGroupColorsFileValid(groupColorsFile);
+            int answer;
+            if (valid.equals("true")) {
+                answer = showConfirmDialog("The group colors file "
+                                + groupColorsFile.getAbsolutePath()
+                                + " already exists. \nDo you want to remove it?",
+                        JOptionPane.YES_NO_OPTION);
+            } else {
+                answer = showConfirmDialog("The file "
+                                + groupColorsFile.getAbsolutePath()
+                                + " already exists, but is not valid. Reason: " +
+                                valid + "Do you want to remove it? ",
+                        JOptionPane.YES_NO_OPTION);
+            }
+            if (answer == JOptionPane.YES_OPTION) {
+                boolean success = groupColorsFile.delete();
+                if (!success) {
+                    showMessageDialog("Cannot delete the file "
+                            + groupColorsFile.getAbsolutePath()
+                            + ". Maybe the file is in use.", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            } else {
+                return;
+            }
+        }
+        try {
+            groupLabels.generateGroupColorsFile(groupColorsFile);
+            setGroupColorsFile(groupColorsFile);
+            enableButtons();
+        } catch (Exception e1) {
+            groupColorsFile.delete();
+            showMessageDialog("Could not generate Group colors file: " +
+                    e1.getMessage(), JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        try {
+            jb_editGroupColorsActionPerformed(e);
+        } catch (Exception e2) {
+            showMessageDialog("Could not open file " + groupColorsFile.getAbsolutePath()
+                    + " for editing. Reason: " + e2.getMessage(), JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void jb_generateGroupLabelsFileActionPerformed(ActionEvent e) {
+        if (samples == null) {
+            samples = parsedFilesDirectory.getExpMatFileHandler().getSamples();
+            System.out.println(" samples was null: replaced from parsedFilesDirecotyr. " +
+                    "this should not have occcured though.");
+        }
+        OpenFileChooserAction openFileChooserAction =
+                new OpenFileChooserAction("Write Group labels filename", false);
+        openFileChooserAction.actionPerformed(e);
+        groupLabelsFile = openFileChooserAction.getSelectedFile();
+
+        if (groupLabelsFile.exists()) {
+            String valid = GroupLabels.isGroupLabelsFileValid(groupLabelsFile, samples);
+            int answer;
+            if (valid.equals("true")) {
+                answer = showConfirmDialog("The group labels file "
+                                + groupLabelsFile.getAbsolutePath()
+                                + " already exists. \nDo you want to remove it?",
+                        JOptionPane.YES_NO_OPTION);
+            } else {
+                answer = showConfirmDialog("The file "
+                                + groupLabelsFile.getAbsolutePath()
+                                + " already exists, but is not valid. \nReason: " +
+                                valid + "\nDo you want to remove it? ",
+                        JOptionPane.YES_NO_OPTION);
+            }
+            if (answer == JOptionPane.YES_OPTION) {
+                boolean success = groupLabelsFile.delete();
+                if (!success) {
+                    showMessageDialog("Cannot delete the file "
+                            + groupLabelsFile.getAbsolutePath()
+                            + ". Maybe the file is in use.", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            } else {
+                return;
+            }
+        }
+        try {
+            GroupLabels.generateGroupLabelsFile(groupLabelsFile, samples);
+            setGroupLabelsFile(groupLabelsFile);
+            enableButtons();
+        } catch (Exception e1) {
+            groupLabelsFile.delete();
+            showMessageDialog("Could not generate Group labels file: " +
+                    e1.getMessage(), JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        try {
+            jb_editGroupLabelsActionPerformed(e);
+        } catch (Exception e2) {
+            showMessageDialog("Could not open file " + groupLabelsFile.getAbsolutePath()
+                    + " for editing. Reason: " + e2.getMessage(), JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+
+    private void jb_chooseGroupLabelsFileActionPerformed(ActionEvent e) {
+        OpenFileChooserAction openFileChooserAction =
+                new OpenFileChooserAction("Select group labels file", false);
+        openFileChooserAction.actionPerformed(e);
+        File chosenFile = openFileChooserAction.getSelectedFile();
+        if (chosenFile == null)
+            return;
+        String valid = GroupLabels.isGroupLabelsFileValid(chosenFile, samples);
+        if (valid.equals("true")) {
+            groupLabelsFile = chosenFile;
+            setGroupLabelsFile(groupLabelsFile);
+            enableButtons();
+        } else {
+            showMessageDialog("Group labels file is not valid: \n"
+                            + valid + "\nFile:" + chosenFile.getAbsolutePath() + "\n",
+                    JOptionPane.ERROR_MESSAGE);
+            setGroupLabelsFile(null);
+            jl_groupLabelsFile.setToolTipText("File was not valid: " + valid);
+        }
+    }
+
+    private void jb_chooseGroupColorsFileActionPerformed(ActionEvent e) {
+        OpenFileChooserAction openFileChooserAction =
+                new OpenFileChooserAction("Select group colors file", false);
+        openFileChooserAction.actionPerformed(e);
+        File chosenFile = openFileChooserAction.getSelectedFile();
+        if (chosenFile == null)
+            return;
+        groupColorsFile = chosenFile;
+        setGroupColorsFile(groupColorsFile);
+    }
+
+    private void jb_editGroupLabelsActionPerformed(ActionEvent e) {
+        if (!groupLabelsFile.exists()) {
+            showMessageDialog("The group labels file " + groupLabelsFile.getAbsolutePath() +
+                    " does not exist:\n", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        OpenFileAction openFileAction = new OpenFileAction(groupLabelsFile.getAbsolutePath());
+        openFileAction.actionPerformed(e);
+    }
+
+    private void jb_editGroupColorsActionPerformed(ActionEvent e) {
+        if (!groupColorsFile.exists()) {
+            showMessageDialog("Group colors file is not specified", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        OpenFileAction openFileAction = new OpenFileAction(groupColorsFile.getAbsolutePath());
+        openFileAction.actionPerformed(e);
+    }
+
+    private void jb_setGroupsActionPerformed(ActionEvent e) {
+        groupLabels = new GroupLabels(samples);
+        if (groupLabelsFile != null) {
+            try {
+                groupLabels.setGroupLabels(groupLabelsFile);
+                isGroupLabelsSet = true;
+            } catch (Exception e1) {
+                isGroupLabelsSet = false;
+                setGroupLabelsFile(null);
+                enableButtons();
+                showMessageDialog("Group labels file is not valid: \n"
+                                + e1.getMessage() + "\nFile:" + groupLabelsFile.getAbsolutePath(),
+                        JOptionPane.ERROR_MESSAGE);
+
+            }
+        }
+
+        if (groupColorsFile != null) {
+            try {
+                groupLabels.setGroupColors(groupColorsFile);
+                isGroupLabelsSet = true;
+            } catch (Exception e1) {
+                isGroupLabelsSet = false;
+                enableButtons();
+                setGroupColorsFile(null);
+                showMessageDialog("Group colors file is not valid: \n"
+                                + e1.getMessage() + "\nFile:" + groupColorsFile.getAbsolutePath(),
+                        JOptionPane.ERROR_MESSAGE);
+
+            }
+        }
+
+
+        enableButtons();
+    }
+
+    private void jb_editGroupsActionPerformed(ActionEvent e) {
+        isGroupLabelsSet = false;
+        enableButtons();
+    }
+
     private void setTmmLabelsFile(File tmmLabelsFile) {
         if (tmmLabelsFile != null) {
             String labelText = tmmLabelsFile.getName().length() > 20 ?
-                    tmmLabelsFile.getName().substring(0,17) + "..." : tmmLabelsFile.getName();
+                    tmmLabelsFile.getName().substring(0, 17) + "..." : tmmLabelsFile.getName();
             jl_tmmLabelsFile.setText(labelText);
             jl_tmmLabelsFile.setToolTipText(tmmLabelsFile.getAbsolutePath());
             jl_tmmLabelsFile.setForeground(new Color(0, 188, 49));
@@ -1014,7 +1436,12 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                     tmmProps.setProperty(ETMMProps.TMMLABELSFILE.getName(), tmmLabelsFile.getAbsolutePath());
             } else {
                 tmmProps.setProperty(ETMMProps.VALIDATIONMODE.getName(), "false");
+                if (groupLabelsFile != null && groupLabelsFile.exists())
+                    tmmProps.setProperty(ETMMProps.GROUPLABELSFILE.getName(), groupLabelsFile.getAbsolutePath());
+                if (groupColorsFile != null && groupColorsFile.exists())
+                    tmmProps.setProperty(ETMMProps.GROUPCOLORSFILE.getName(), groupColorsFile.getAbsolutePath());
             }
+
             tmmProps.setProperty(ETMMProps.BOOTCYCLES.getName(), jtxt_bootCycles.getText());
         } catch (Exception e) {
             String message = "Couldn't save the settings. Error: "
@@ -1058,7 +1485,6 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     }
 
     private void initComponents() {
-
         jtp_tmm = new javax.swing.JTabbedPane();
         jsp_gettingStarted = new javax.swing.JScrollPane();
         jtp_gettingStarted = new javax.swing.JPanel();
@@ -1102,6 +1528,18 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jb_chooseTMMLabels = new javax.swing.JButton();
         jb_editTMMLabels = new javax.swing.JButton();
         jl_tmmLabelsFile = new javax.swing.JLabel();
+        jl_sampleColors = new javax.swing.JLabel();
+        jb_generateGroupColorsFile = new javax.swing.JButton();
+        jl_groupColorsFile = new javax.swing.JLabel();
+        jb_chooseGroupColorsFile = new javax.swing.JButton();
+        jb_editGroupColors = new javax.swing.JButton();
+        jl_sampleColors1 = new javax.swing.JLabel();
+        jb_generateGroupLabelsFile = new javax.swing.JButton();
+        jb_chooseGroupLabelsFile = new javax.swing.JButton();
+        jl_groupLabelsFile = new javax.swing.JLabel();
+        jb_editGroupLabels = new javax.swing.JButton();
+        jb_editGroups = new javax.swing.JButton();
+        jb_setGroups = new javax.swing.JButton();
         jb_saveSettings = new javax.swing.JButton();
         jsp_run = new javax.swing.JScrollPane();
         jtp_run = new javax.swing.JPanel();
@@ -1117,6 +1555,8 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jl_samples = new javax.swing.JLabel();
         jcb_samples = new javax.swing.JComboBox<>();
         jb_viz = new javax.swing.JButton();
+        jl_visualize = new javax.swing.JLabel();
+        jl_run = new javax.swing.JLabel();
         jsp_about = new javax.swing.JScrollPane();
         jtp_about = new javax.swing.JPanel();
         jb_webpage = new javax.swing.JButton();
@@ -1298,35 +1738,35 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                                 .addGroup(jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                                         .addComponent(jl_expMat)
                                                         .addComponent(jl_iterationTitle)
-                                                        .addComponent(jl_geneID))
-                                                .addGap(38, 38, 38)
+                                                        .addComponent(jl_geneID)
+                                                        .addComponent(jl_parentDir))
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                                 .addGroup(jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addComponent(jtxt_iterationTitle)
                                                         .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
-                                                                .addComponent(jb_chooseExpMatFile, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(jl_chosenExpMatFile, javax.swing.GroupLayout.PREFERRED_SIZE, 96, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                                .addGap(0, 0, Short.MAX_VALUE))
-                                                        .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
-                                                                .addComponent(jcb_geneID, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(jb_refresh, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                        .addComponent(jtxt_iterationTitle)))
-                                        .addComponent(jsp_comment)
-                                        .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
-                                                .addGroup(jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                        .addComponent(jl_comment)
-                                                        .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
-                                                                .addComponent(jl_parentDir)
-                                                                .addGap(18, 18, 18)
                                                                 .addComponent(jb_browseParentDir, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(jl_chosenParentDir)))
-                                                .addGap(0, 0, Short.MAX_VALUE))
+                                                                .addComponent(jl_chosenParentDir)
+                                                                .addGap(0, 0, Short.MAX_VALUE))
+                                                        .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
+                                                                .addGroup(jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                                        .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
+                                                                                .addComponent(jb_chooseExpMatFile, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                                                .addComponent(jl_chosenExpMatFile, javax.swing.GroupLayout.PREFERRED_SIZE, 96, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                                .addGap(0, 0, Short.MAX_VALUE))
+                                                                        .addComponent(jcb_geneID, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                                .addComponent(jb_refresh, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                                        .addComponent(jsp_comment)
                                         .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
                                                 .addComponent(jb_edit, javax.swing.GroupLayout.PREFERRED_SIZE, 82, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                                .addComponent(jb_done, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                .addContainerGap())
+                                                .addComponent(jb_done, javax.swing.GroupLayout.PREFERRED_SIZE, 88, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                        .addGroup(jp_filesAndTitlesLayout.createSequentialGroup()
+                                                .addComponent(jl_comment)
+                                                .addGap(0, 0, Short.MAX_VALUE)))
+                                .addGap(4, 4, 4))
         );
         jp_filesAndTitlesLayout.setVerticalGroup(
                 jp_filesAndTitlesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1364,12 +1804,12 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jp_modeAndLabels.setBorder(javax.swing.BorderFactory.createEtchedBorder());
 
         jrb_validationMode.setFont(new java.awt.Font("Tahoma", 1, 16)); // NOI18N
-        jrb_validationMode.setForeground(new java.awt.Color(0, 188, 49));
+        jrb_validationMode.setForeground(new java.awt.Color(51, 153, 0));
         jrb_validationMode.setText("Validation mode");
 
         jrb_predictionMode.setFont(new java.awt.Font("Tahoma", 1, 16)); // NOI18N
         jrb_predictionMode.setForeground(new java.awt.Color(21, 140, 186));
-        jrb_predictionMode.setText("Prediction mode");
+        jrb_predictionMode.setText("Assessment mode");
 
         jl_tmmLabels.setFont(new java.awt.Font("Tahoma", 1, 13)); // NOI18N
         jl_tmmLabels.setForeground(new java.awt.Color(102, 103, 114));
@@ -1388,18 +1828,80 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jl_tmmLabelsFile.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
         jl_tmmLabelsFile.setText("No file chosen");
 
+        jl_sampleColors.setFont(new java.awt.Font("Tahoma", 1, 13)); // NOI18N
+        jl_sampleColors.setForeground(new java.awt.Color(102, 103, 114));
+        jl_sampleColors.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        jl_sampleColors.setText("Group colors");
+
+        jb_generateGroupColorsFile.setText("Generate file");
+
+        jl_groupColorsFile.setForeground(new java.awt.Color(102, 103, 114));
+        jl_groupColorsFile.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        jl_groupColorsFile.setText("No file chosen");
+
+        jb_chooseGroupColorsFile.setText("Choose file");
+        jb_chooseGroupColorsFile.setPreferredSize(new java.awt.Dimension(105, 25));
+
+        jb_editGroupColors.setText("Edit file");
+        jb_editGroupColors.setPreferredSize(new java.awt.Dimension(105, 25));
+
+        jl_sampleColors1.setFont(new java.awt.Font("Tahoma", 1, 13)); // NOI18N
+        jl_sampleColors1.setForeground(new java.awt.Color(102, 103, 114));
+        jl_sampleColors1.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        jl_sampleColors1.setText("Group labels");
+
+        jb_generateGroupLabelsFile.setText("Generate file");
+
+        jb_chooseGroupLabelsFile.setText("Choose file");
+        jb_chooseGroupLabelsFile.setPreferredSize(new java.awt.Dimension(105, 25));
+
+        jl_groupLabelsFile.setForeground(new java.awt.Color(102, 103, 114));
+        jl_groupLabelsFile.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
+        jl_groupLabelsFile.setText("No file chosen");
+
+        jb_editGroupLabels.setText("Edit file");
+        jb_editGroupLabels.setPreferredSize(new java.awt.Dimension(105, 25));
+
+        jb_editGroups.setFont(new java.awt.Font("Tahoma", 1, 13)); // NOI18N
+        jb_editGroups.setForeground(new java.awt.Color(21, 140, 186));
+        jb_editGroups.setText("Edit");
+        jb_editGroups.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+
+        jb_setGroups.setFont(new java.awt.Font("Tahoma", 1, 13)); // NOI18N
+        jb_setGroups.setForeground(new java.awt.Color(51, 153, 0));
+        jb_setGroups.setText("Set");
+        jb_setGroups.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(0, 0, 0)));
+
         javax.swing.GroupLayout jp_modeAndLabelsLayout = new javax.swing.GroupLayout(jp_modeAndLabels);
         jp_modeAndLabels.setLayout(jp_modeAndLabelsLayout);
         jp_modeAndLabelsLayout.setHorizontalGroup(
                 jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
+                                .addContainerGap()
                                 .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                                .addComponent(jrb_validationMode)
-                                                .addComponent(jrb_predictionMode))
                                         .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
-                                                .addContainerGap()
                                                 .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addComponent(jrb_predictionMode)
+                                                        .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
+                                                                .addComponent(jl_sampleColors1, javax.swing.GroupLayout.PREFERRED_SIZE, 117, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                .addGap(29, 29, 29)
+                                                                .addComponent(jl_groupLabelsFile, javax.swing.GroupLayout.PREFERRED_SIZE, 172, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                        .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
+                                                                .addComponent(jb_generateGroupLabelsFile)
+                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                                                .addComponent(jb_chooseGroupLabelsFile, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                .addGap(13, 13, 13)
+                                                                .addComponent(jb_editGroupLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 94, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                        .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
+                                                                .addComponent(jl_sampleColors, javax.swing.GroupLayout.PREFERRED_SIZE, 117, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                .addGap(29, 29, 29)
+                                                                .addComponent(jl_groupColorsFile, javax.swing.GroupLayout.PREFERRED_SIZE, 172, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                        .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
+                                                                .addComponent(jb_generateGroupColorsFile)
+                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                                                .addComponent(jb_chooseGroupColorsFile, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                .addGap(13, 13, 13)
+                                                                .addComponent(jb_editGroupColors, javax.swing.GroupLayout.PREFERRED_SIZE, 94, javax.swing.GroupLayout.PREFERRED_SIZE))
                                                         .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
                                                                 .addComponent(jl_tmmLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 117, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                                 .addGap(29, 29, 29)
@@ -1409,15 +1911,42 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                                                 .addComponent(jb_chooseTMMLabels, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                                 .addGap(13, 13, 13)
-                                                                .addComponent(jb_editTMMLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 94, javax.swing.GroupLayout.PREFERRED_SIZE)))))
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                                                .addComponent(jb_editTMMLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 94, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                        .addComponent(jrb_validationMode))
+                                                .addGap(0, 0, Short.MAX_VALUE))
+                                        .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
+                                                .addComponent(jb_editGroups, javax.swing.GroupLayout.PREFERRED_SIZE, 94, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                                .addComponent(jb_setGroups, javax.swing.GroupLayout.PREFERRED_SIZE, 94, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addContainerGap())
         );
         jp_modeAndLabelsLayout.setVerticalGroup(
                 jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jp_modeAndLabelsLayout.createSequentialGroup()
-                                .addContainerGap()
                                 .addComponent(jrb_predictionMode)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(jl_sampleColors1)
+                                        .addComponent(jl_groupLabelsFile))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(jb_generateGroupLabelsFile)
+                                        .addComponent(jb_chooseGroupLabelsFile, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(jb_editGroupLabels, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(jl_sampleColors)
+                                        .addComponent(jl_groupColorsFile))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(jb_generateGroupColorsFile)
+                                        .addComponent(jb_chooseGroupColorsFile, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(jb_editGroupColors, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(jb_editGroups, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(jb_setGroups, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 24, Short.MAX_VALUE)
                                 .addComponent(jrb_validationMode)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addGroup(jp_modeAndLabelsLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
@@ -1428,7 +1957,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                         .addComponent(jb_generateTMMLabels)
                                         .addComponent(jb_chooseTMMLabels, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addComponent(jb_editTMMLabels, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addGap(17, 17, 17))
         );
 
         jb_saveSettings.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
@@ -1439,26 +1968,26 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jtp_setup.setLayout(jtp_setupLayout);
         jtp_setupLayout.setHorizontalGroup(
                 jtp_setupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jtp_setupLayout.createSequentialGroup()
+                        .addGroup(jtp_setupLayout.createSequentialGroup()
                                 .addContainerGap()
-                                .addGroup(jtp_setupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                        .addGroup(jtp_setupLayout.createSequentialGroup()
-                                                .addGap(0, 0, Short.MAX_VALUE)
+                                .addGroup(jtp_setupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jtp_setupLayout.createSequentialGroup()
+                                                .addGap(10, 10, 10)
                                                 .addComponent(jb_saveSettings, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                        .addComponent(jp_modeAndLabels, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(jp_modeAndLabels, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                         .addComponent(jp_filesAndTitles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                .addGap(113, 113, 113))
+                                .addContainerGap(459, Short.MAX_VALUE))
         );
         jtp_setupLayout.setVerticalGroup(
                 jtp_setupLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jtp_setupLayout.createSequentialGroup()
                                 .addContainerGap()
                                 .addComponent(jp_filesAndTitles, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(62, 62, 62)
-                                .addComponent(jp_modeAndLabels, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(12, 12, 12)
+                                .addComponent(jp_modeAndLabels, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jb_saveSettings, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addContainerGap(136, Short.MAX_VALUE))
+                                .addContainerGap(39, Short.MAX_VALUE))
         );
 
         jsp_setup.setViewportView(jtp_setup);
@@ -1502,7 +2031,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jp_runLayout.setHorizontalGroup(
                 jp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jp_runLayout.createSequentialGroup()
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addContainerGap(31, Short.MAX_VALUE)
                                 .addGroup(jp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                                         .addComponent(jb_addFC, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                         .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jp_runLayout.createSequentialGroup()
@@ -1545,7 +2074,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jl_samples.setText("Samples");
 
         jb_viz.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
-        jb_viz.setForeground(new java.awt.Color(0, 188, 49));
+        jb_viz.setForeground(new java.awt.Color(51, 153, 0));
         jb_viz.setText("Viz");
         jb_viz.setBorder(javax.swing.BorderFactory.createLineBorder(new java.awt.Color(21, 140, 186)));
 
@@ -1573,25 +2102,39 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
+        jl_visualize.setFont(new java.awt.Font("Tahoma", 1, 16)); // NOI18N
+        jl_visualize.setForeground(new java.awt.Color(51, 153, 0));
+        jl_visualize.setText("Visualize pathway activities");
+
+        jl_run.setFont(new java.awt.Font("Tahoma", 1, 16)); // NOI18N
+        jl_run.setForeground(new java.awt.Color(21, 140, 186));
+        jl_run.setText("Run");
+
         javax.swing.GroupLayout jtp_runLayout = new javax.swing.GroupLayout(jtp_run);
         jtp_run.setLayout(jtp_runLayout);
         jtp_runLayout.setHorizontalGroup(
                 jtp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jtp_runLayout.createSequentialGroup()
                                 .addContainerGap()
-                                .addGroup(jtp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                        .addComponent(jp_run, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(jp_visualization, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                .addContainerGap(111, Short.MAX_VALUE))
+                                .addGroup(jtp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(jp_visualization, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(jp_run, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(jl_run, javax.swing.GroupLayout.PREFERRED_SIZE, 198, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(jl_visualize, javax.swing.GroupLayout.PREFERRED_SIZE, 336, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addContainerGap(458, Short.MAX_VALUE))
         );
         jtp_runLayout.setVerticalGroup(
                 jtp_runLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jtp_runLayout.createSequentialGroup()
-                                .addContainerGap()
+                                .addGap(23, 23, 23)
+                                .addComponent(jl_run)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jp_run, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(18, 18, 18)
+                                .addComponent(jl_visualize)
+                                .addGap(10, 10, 10)
                                 .addComponent(jp_visualization, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addContainerGap(438, Short.MAX_VALUE))
+                                .addContainerGap(375, Short.MAX_VALUE))
         );
 
         jsp_run.setViewportView(jtp_run);
@@ -1613,7 +2156,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
         jtxt_copyright.setColumns(20);
         jtxt_copyright.setLineWrap(true);
         jtxt_copyright.setRows(5);
-        jtxt_copyright.setText("TMM version 0.4 beta\n© 2017\nLilit Nersisyan, \nArsen Arakelyan \n\nGroup of Bioinformatics, \nInstitute of Molecular Biology NAS\nYerevan, Armenia \n\nLicensed under: \nGNU General Public License version 3.\n");
+        jtxt_copyright.setText("TMM version 0.1 beta\n© 2017\nLilit Nersisyan, \nArsen Arakelyan \n\nGroup of Bioinformatics, \nInstitute of Molecular Biology NAS\nYerevan, Armenia \n\nLicensed under: \nGNU General Public License version 3.\n");
         jtxt_copyright.setToolTipText("");
         jtxt_copyright.setBorder(null);
         jscp_copyright.setViewportView(jtxt_copyright);
@@ -1638,7 +2181,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                                         .addGroup(jtp_aboutLayout.createSequentialGroup()
                                                 .addGap(86, 86, 86)
                                                 .addComponent(jb_webpage, javax.swing.GroupLayout.PREFERRED_SIZE, 216, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                .addContainerGap(117, Short.MAX_VALUE))
+                                .addContainerGap(443, Short.MAX_VALUE))
         );
         jtp_aboutLayout.setVerticalGroup(
                 jtp_aboutLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1664,7 +2207,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
                 layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(layout.createSequentialGroup()
                                 .addContainerGap()
-                                .addComponent(jtp_tmm, javax.swing.GroupLayout.DEFAULT_SIZE, 420, Short.MAX_VALUE))
+                                .addComponent(jtp_tmm, javax.swing.GroupLayout.DEFAULT_SIZE, 443, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
                 layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1679,11 +2222,18 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     private javax.swing.JButton jb_addFC;
     private javax.swing.JButton jb_browseParentDir;
     private javax.swing.JButton jb_chooseExpMatFile;
+    private javax.swing.JButton jb_chooseGroupColorsFile;
+    private javax.swing.JButton jb_chooseGroupLabelsFile;
     private javax.swing.JButton jb_chooseTMMLabels;
     private javax.swing.JButton jb_done;
     private javax.swing.JButton jb_downloadExamples;
     private javax.swing.JButton jb_edit;
+    private javax.swing.JButton jb_editGroupColors;
+    private javax.swing.JButton jb_editGroupLabels;
+    private javax.swing.JButton jb_editGroups;
     private javax.swing.JButton jb_editTMMLabels;
+    private javax.swing.JButton jb_generateGroupColorsFile;
+    private javax.swing.JButton jb_generateGroupLabelsFile;
     private javax.swing.JButton jb_generateReport;
     private javax.swing.JButton jb_generateTMMLabels;
     private javax.swing.JButton jb_goToUserGuide;
@@ -1692,6 +2242,7 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     private javax.swing.JButton jb_runAll;
     private javax.swing.JButton jb_runPSF;
     private javax.swing.JButton jb_saveSettings;
+    private javax.swing.JButton jb_setGroups;
     private javax.swing.JButton jb_viz;
     private javax.swing.JButton jb_webpage;
     private javax.swing.JComboBox<String> jcb_geneID;
@@ -1704,16 +2255,22 @@ public class TMMPanel extends JPanel implements CytoPanelComponent {
     private javax.swing.JLabel jl_downloadExamples;
     private javax.swing.JLabel jl_expMat;
     private javax.swing.JLabel jl_geneID;
+    private javax.swing.JLabel jl_groupColorsFile;
+    private javax.swing.JLabel jl_groupLabelsFile;
     private javax.swing.JLabel jl_iterationTitle;
     private javax.swing.JLabel jl_loadData;
     private javax.swing.JLabel jl_parentDir;
     private javax.swing.JLabel jl_readUserGuide;
+    private javax.swing.JLabel jl_run;
     private javax.swing.JLabel jl_runTMM;
+    private javax.swing.JLabel jl_sampleColors;
+    private javax.swing.JLabel jl_sampleColors1;
     private javax.swing.JLabel jl_samples;
     private javax.swing.JLabel jl_title;
     private javax.swing.JLabel jl_tmmLabels;
     private javax.swing.JLabel jl_tmmLabelsFile;
     private javax.swing.JLabel jl_tmmLogo;
+    private javax.swing.JLabel jl_visualize;
     private javax.swing.JPanel jp_filesAndTitles;
     private javax.swing.JPanel jp_modeAndLabels;
     private javax.swing.JPanel jp_run;

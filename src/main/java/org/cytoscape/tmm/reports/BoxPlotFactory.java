@@ -41,6 +41,7 @@ public class BoxPlotFactory {
 
     private SummaryFileHandler summaryFileHandler;
     private TMMLabels tmmLabels;
+    private GroupLabels groupLabels;
     private HashMap<String, HashMap<String, Double>> boxplotStats; // tmmkey:stat:statValue
 
     /**
@@ -55,6 +56,22 @@ public class BoxPlotFactory {
         summaryMap = summaryFileHandler.getSummaryMap();
         samples = summaryFileHandler.getSamples();
         labelSamplesMap = tmmLabels.getLabelSamplesMap();
+        boxplotStats = new HashMap<>();
+    }
+
+
+    /**
+     * Basic constructor
+     *
+     * @param summaryFileHandler
+     * @param groupLabels
+     */
+    public BoxPlotFactory(SummaryFileHandler summaryFileHandler, GroupLabels groupLabels) {
+        this.summaryFileHandler = summaryFileHandler;
+        this.groupLabels = groupLabels;
+        summaryMap = summaryFileHandler.getSummaryMap();
+        samples = summaryFileHandler.getSamples();
+        labelSamplesMap = groupLabels.getGroupSamplesMap();
         boxplotStats = new HashMap<>();
     }
 
@@ -88,7 +105,11 @@ public class BoxPlotFactory {
         BoxAndWhiskerRenderer renderer = new BoxAndWhiskerRenderer();
         int n = dataset.getRowCount();
         for (int series = 0; series < n; series++) {
-            Paint color = tmmLabels.getLabelColor((String) dataset.getRowKey(series));
+            Paint color;
+            if (tmmLabels != null)
+                color = tmmLabels.getLabelColor((String) dataset.getRowKey(series));
+            else
+                color = groupLabels.getGroupColorsMap().get((String) dataset.getRowKey(series));
             renderer.setSeriesPaint(series, color);
         }
 
@@ -106,6 +127,10 @@ public class BoxPlotFactory {
         if (dataset.getRowCount() < 2)
             return boxplot;
 
+        //If the tmmLabels == null, skip statistics yet
+        if (tmmLabels == null)
+            return boxplot;
+
         // Statistics legends
         HashMap<String, Double> thisBoxplotStats = new HashMap<>();
         boxplotStats.put(tmmKey, thisBoxplotStats);
@@ -118,7 +143,7 @@ public class BoxPlotFactory {
             Double test2[] = new Double[]{Double.NaN, Double.NaN};
 
 
-            if(tmmKey.equals(ALTKEY)) {
+            if (tmmKey.equals(ALTKEY)) {
                 if (dataset.getRowKeys().contains(TMMLabels.A) && dataset.getRowKeys().contains(TMMLabels.N))
                     test1 = medDiff(dataset, tmmKey, TMMLabels.A, TMMLabels.N);
 
@@ -143,7 +168,7 @@ public class BoxPlotFactory {
             double diff2 = Double.isNaN(test2[0]) ? Double.NaN : DoubleFormatter.formatDouble(test2[0]);
             double p2 = Double.isNaN(test2[1]) ? Double.NaN : DoubleFormatter.formatDouble(test2[1], 3);
             TextTitle legendText = new TextTitle(formatLegend(p, diff1, p1, diff2, p2,
-                    (tmmKey.equals(ALTKEY) ? tmmLabels.A : tmmLabels.T )));
+                    (tmmKey.equals(ALTKEY) ? tmmLabels.A : tmmLabels.T)));
             TextTitle legendTitle = new TextTitle("Statistics");
             legendTitle.setPosition(RectangleEdge.BOTTOM);
             legendTitle.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 11));
@@ -192,6 +217,7 @@ public class BoxPlotFactory {
     private BoxAndWhiskerCategoryDataset createSampleDataset(String tmmKey) {
         DefaultBoxAndWhiskerCategoryDataset dataset
                 = new DefaultBoxAndWhiskerCategoryDataset();
+
         for (String label : labelSamplesMap.keySet()) {
             if (labelSamplesMap.get(label).size() > 0) {
                 List list = new ArrayList<>();
@@ -303,8 +329,8 @@ public class BoxPlotFactory {
         String row1 = row1Col1 + row1Space2 + row1Col2;
 
         String col1;
-        if(plotType.equals(TMMLabels.A))
-            col1= "ALT vs norm";
+        if (plotType.equals(TMMLabels.A))
+            col1 = "ALT vs norm";
         else
             col1 = "Tel-ase vs norm";
         String col2 = "Median Diff:";
@@ -318,7 +344,7 @@ public class BoxPlotFactory {
 
         String row2 = col1 + space12 + col2 + space23 + col3 + space34 + col4 + space45 + col5;
 
-        if(plotType.equals(TMMLabels.A))
+        if (plotType.equals(TMMLabels.A))
             col1 = "ALT vs Tel-ase";
         else
             col1 = "Tel-ase vs ALT";

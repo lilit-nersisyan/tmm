@@ -10,6 +10,8 @@ public enum ETMMProps {
     ITERATION("Iteration"),
     COMMENT("Comment"),
     TMMLABELSFILE("TMMLabelsFile"),
+    GROUPLABELSFILE("GroupLabelsFile"),
+    GROUPCOLORSFILE("GroupColorsFile"),
     BOOTCYCLES("BootCycles"),
     VALIDATIONMODE("ValidationMode");
 

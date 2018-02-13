@@ -6,17 +6,14 @@ import org.cytoscape.tmm.gui.CyManager;
 import org.cytoscape.tmm.gui.TMMPanel;
 import org.cytoscape.tmm.processing.ExpMatFileHandler;
 import org.cytoscape.tmm.processing.ParsedFilesDirectory;
+import org.cytoscape.tmm.reports.GroupLabels;
 import org.cytoscape.work.*;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -196,18 +193,27 @@ public class RunPipelineAction extends AbstractCyAction {
                         GenerateReportAction generateReportAction;
                         if (tmmPanel.isValidationMode()) {
                             generateReportAction = new GenerateReportAction(
-                                    "Generating report",
-                                    tmmPanel.getSummaryFile(), reportDir,
+                                    "Generating report action",
+                                    tmmPanel.getSummaryFile(),
+                                    reportDir,
                                     tmmPanel.getTmmLabelsFile(),
                                     tmmPanel.getIterationTitle(),
                                     tmmPanel.getCommentText(),
-                                    tmmPanel.getBootCycles(), parsedFilesDirectory);
-                        } else
+                                    tmmPanel.getBootCycles(),
+                                    parsedFilesDirectory,
+                                    true);
+                        } else {
                             generateReportAction = new GenerateReportAction(
                                     "Generate report action",
                                     tmmPanel.getSummaryFile(),
-                                    reportDir, tmmPanel.getIterationTitle(),
-                                    tmmPanel.getCommentText(), tmmPanel.getBootCycles(), parsedFilesDirectory);
+                                    reportDir,
+                                    tmmPanel.getGroupLabels(),
+                                    tmmPanel.getIterationTitle(),
+                                    tmmPanel.getCommentText(),
+                                    tmmPanel.getBootCycles(),
+                                    parsedFilesDirectory,
+                                    false);
+                        }
                         generateReportAction.actionPerformed(e);
                         tmmPanel.setReportFile(generateReportAction.getPdfFile());
                         tmmPanel.setGenerateReportDone(true);

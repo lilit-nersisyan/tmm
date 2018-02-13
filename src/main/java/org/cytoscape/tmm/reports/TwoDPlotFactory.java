@@ -3,24 +3,17 @@ package org.cytoscape.tmm.reports;
 import org.cytoscape.tmm.gui.DoubleFormatter;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.labels.XYItemLabelGenerator;
-import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.title.TextTitle;
-import org.jfree.data.xy.XYDataItem;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.ui.HorizontalAlignment;
-import org.jfree.ui.RectangleAnchor;
 import org.jfree.ui.RectangleEdge;
-import org.jfree.ui.RectangleInsets;
 
 import java.awt.*;
-import java.awt.geom.Ellipse2D;
-import java.lang.reflect.Array;
+import java.awt.geom.Arc2D;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -38,7 +31,9 @@ import static org.cytoscape.tmm.reports.SummaryFileHandler.TELOMERASEKEY;
 public class TwoDPlotFactory {
 
     private String SCORESKEY = "scores";
+    public Double LOGINCREMENT = 0.01;
     private boolean labeled = false;
+    private boolean logScale = false;
 
     private double[] domainRange = new double[]{0, 0};
     private double[] rangeRange = new double[]{0, 0};
@@ -51,20 +46,23 @@ public class TwoDPlotFactory {
 
     private final SummaryFileHandler summaryFileHandler;
     private TMMLabels tmmLabels;
+    private GroupLabels groupLabels;
     private double accuracy;
     private boolean drawPointLabels = true;
 
 
     /**
-     * Constructor for non-labeled samples.
+     * Constructor for estimation mode.
      *
      * @param summaryFileHandler
+     * @param groupLabels        Grouplabels class object
      * @throws Exception
      */
-    public TwoDPlotFactory(SummaryFileHandler summaryFileHandler) {
+    public TwoDPlotFactory(SummaryFileHandler summaryFileHandler, GroupLabels groupLabels) {
         this.summaryFileHandler = summaryFileHandler;
         summaryMap = summaryFileHandler.getSummaryMap();
         samples = summaryFileHandler.getSamples();
+        this.groupLabels = groupLabels;
     }
 
 
@@ -88,6 +86,7 @@ public class TwoDPlotFactory {
     /**
      * If drawPointLables is set to true (default), the points will have labels on the plot,
      * and not otherwise.
+     *
      * @param drawPointLabels
      */
     public void setDrawPointLabels(boolean drawPointLabels) {
@@ -110,8 +109,16 @@ public class TwoDPlotFactory {
             throw new Exception("Problem creating dataset: " + e.getMessage());
         }
 
+        String chartTitle = "TMM scores 2D plot";
+        if(drawPointLabels){
+            chartTitle = chartTitle + ": labeled";
+        }
+
+        if(logScale)
+            chartTitle = chartTitle + " (log2 scale)";
+
         JFreeChart tmm2Dchart = ChartFactory.createScatterPlot(
-                "TMM scores 2D plot",
+                chartTitle,
                 "Telomerase PSF score", "ALT PSF score", dataset,
                 PlotOrientation.VERTICAL, true, false, false);
 
@@ -120,6 +127,7 @@ public class TwoDPlotFactory {
 
         return tmm2Dchart;
     }
+
 
     /**
      * Reads the PSF scores from the summarfilehandler. If labeled, reads the TMM labels from tmmLabels.
@@ -133,7 +141,7 @@ public class TwoDPlotFactory {
         try {
             if (labeled)
                 return createLabeledDataset();
-            return createNonLabeledDataset();
+            return createGroupLabeledDataset();
         } catch (Exception e) {
             throw e;
         }
@@ -146,13 +154,17 @@ public class TwoDPlotFactory {
      * @return
      * @throws Exception
      */
-    private XYDataset createNonLabeledDataset() throws Exception{
+    private XYDataset createGroupLabeledDataset() throws Exception {
         XYSeriesCollection tmmDataset = null;
 
         try {
             tmmDataset = new XYSeriesCollection();
-            XYSeries tmmSeries = get2DSeries();
-            tmmDataset.addSeries(tmmSeries);
+            int i = 0;
+            for (String group : groupLabels.getGroups()) {
+                XYSeries series = getGroup2DSeries(group);
+                tmmDataset.addSeries(series);
+                seriesIndex.put(group, i++);
+            }
         } catch (Exception e) {
             throw new Exception("Problem generating the 2D TMM dataset: "
                     + (e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
@@ -223,9 +235,41 @@ public class TwoDPlotFactory {
         return series;
     }
 
+
+    /**
+     * Create a single series of points with(telomerase score, ALT score) coordinates
+     * for samples belonging to the specified group label.
+     *
+     * @return
+     * @throws Exception
+     */
+    private XYSeries getGroup2DSeries(String groupLabel) throws Exception {
+        XYSeries series = new XYSeries(groupLabel, false);
+        HashMap<String, Double> altScores = summaryMap.get(ALTKEY).get(SCORESKEY);
+        HashMap<String, Double> telomeraseScores = summaryMap.get(TELOMERASEKEY).get(SCORESKEY);
+
+        if (altScores.size() != samples.size())
+            throw new Exception("scores for " + ALTKEY + " did not contain " + samples.size()
+                    + " elements" + altScores.size());
+        if (telomeraseScores.size() != samples.size())
+            throw new Exception("p values for " + TELOMERASEKEY + " did not contain " + samples.size()
+                    + " elements. Actual size: " + telomeraseScores.size());
+
+        ArrayList<String> labels = new ArrayList<>();
+
+        for (String s : groupLabels.getSamples(groupLabel)) {
+            series.add(logScale ? Math.log(telomeraseScores.get(s) + LOGINCREMENT) : telomeraseScores.get(s),
+                    logScale ? Math.log(altScores.get(s) + LOGINCREMENT) : altScores.get(s));
+            labels.add(s);
+        }
+        seriesLabels.put(groupLabel, labels);
+        return series;
+    }
+
     /**
      * Create a single series of points with(telomerase score, ALT score) coordinates for the specified TMM label.
-     * Populates the seriesLabels map with the list of sample names for the specified TMM. This map will be used for labeling the points on the 2D plot.
+     * Populates the seriesLabels map with the list of sample names for the specified TMM.
+     * This map will be used for labeling the points on the 2D plot.
      *
      * @param seriesKey the TMM label
      * @return
@@ -247,7 +291,8 @@ public class TwoDPlotFactory {
 
         for (String s : samples) {
             if (tmmLabels.getSamples(seriesKey).contains(s)) {
-                series.add(telomeraseScores.get(s), altScores.get(s));
+                series.add(logScale ? Math.log(telomeraseScores.get(s) + LOGINCREMENT) : telomeraseScores.get(s),
+                        logScale ? Math.log(altScores.get(s) + LOGINCREMENT) : altScores.get(s));
                 labels.add(s);
             }
         }
@@ -257,30 +302,37 @@ public class TwoDPlotFactory {
 
     private void renderPlot(XYPlot plot) {
         PlotManager.renderBase(plot);
-        if(drawPointLabels) {
+        if (drawPointLabels) {
             if (!labeled)
-                PlotManager.setBaseItemLabels(plot, samples);
+//                PlotManager.setBaseItemLabels(plot, samples);
+                PlotManager.setSeriesItemLabels(plot,
+                        groupLabels.getGroupSamplesMap(),
+                        groupLabels.getGroupColorsMap());
             else {
                 PlotManager.setSeriesItemLabels(plot, seriesLabels, tmmLabels);
             }
         } else {
-            if (!labeled) {
+//            if (!labeled) {
+            if (false) { // will be removed from tmm_0.5 if works
                 ArrayList<String> noSamples = new ArrayList<>();
-                for(String s : samples)
+                for (String s : samples)
                     noSamples.add("");
                 PlotManager.setBaseItemLabels(plot, noSamples);
-            }
-            else {
+
+            } else {
                 HashMap<String, ArrayList<String>> seriesNoLabels = new HashMap<>();
-                for(String tmmk : seriesLabels.keySet()){
+                for (String tmmk : seriesLabels.keySet()) {
                     ArrayList<String> nolabarray = new ArrayList<>();
                     ArrayList<String> labarray = seriesLabels.get(tmmk);
-                    for(String v : labarray){
+                    for (String v : labarray) {
                         nolabarray.add("");
                     }
                     seriesNoLabels.put(tmmk, nolabarray);
                 }
-                PlotManager.setSeriesItemLabels(plot, seriesNoLabels, tmmLabels);
+                if (tmmLabels == null)
+                    PlotManager.setSeriesItemLabels(plot, seriesNoLabels, groupLabels);
+                else
+                    PlotManager.setSeriesItemLabels(plot, seriesNoLabels, tmmLabels);
             }
         }
 
@@ -289,28 +341,48 @@ public class TwoDPlotFactory {
         //tmm0.2
         domainRange = summaryFileHandler.getPSFRange(TELOMERASEKEY);
         rangeRange = summaryFileHandler.getPSFRange(ALTKEY);
-        double xMargin = (domainRange[1] - domainRange[0])/10;
-        if(xMargin < 0.1)
+
+        double xmin, xmax, ymin, ymax;
+
+        if(logScale){
+            xmin = Math.log(domainRange[0] + LOGINCREMENT);
+            ymin = Math.log(rangeRange[0] + LOGINCREMENT);
+            xmax = Math.log(domainRange[1] + LOGINCREMENT);
+            ymax = Math.log(rangeRange[1] + LOGINCREMENT);
+        } else {
+            xmin = domainRange[0];
+            xmax = domainRange[1];
+            ymin = rangeRange[0];
+            ymax = rangeRange[1];
+        }
+        double xMargin = (domainRange[1] - domainRange[0]) / 10;
+        if (xMargin < 0.1)
             xMargin = 0.1;
-        double yMargin = (rangeRange[1] - rangeRange[0])/10;
-        if(yMargin < 0.1)
+        double yMargin = (rangeRange[1] - rangeRange[0]) / 10;
+        if (yMargin < 0.1)
             yMargin = 0.1;
-        plot.getDomainAxis().setRange(domainRange[0] - xMargin, domainRange[1] + xMargin);
-        plot.getRangeAxis().setRange(rangeRange[0]-yMargin, rangeRange[1] + yMargin);
+        xmin = xmin - xMargin;
+        xmax = xmax + xMargin;
+        ymin = ymin - yMargin;
+        ymax = ymax + yMargin;
+
+
+        plot.getDomainAxis().setRange(xmin, xmax);
+        plot.getRangeAxis().setRange(ymin , ymax);
     }
 
     /**
      * Draws a horizontal line at the threshold value of the ALT axis.
      *
      * @param twoDChart
-     * @param h - the y axis threshold
+     * @param h         - the y axis threshold
      */
     public void setALTThreshold(JFreeChart twoDChart, double h) throws Exception {
         XYPlot plot = (XYPlot) twoDChart.getPlot();
-        if( h < plot.getRangeAxis().getRange().getLowerBound())
+        if (h < plot.getRangeAxis().getRange().getLowerBound())
             System.out.println("the specified threshold of " +
                     h + " is lower than the lower bound of the y axis: " + plot.getRangeAxis().getRange().getLowerBound());
-        if( h > plot.getRangeAxis().getRange().getUpperBound())
+        if (h > plot.getRangeAxis().getRange().getUpperBound())
             System.out.println("the specified threshold of " +
                     h + " is greater than the upper bound of the y axis: " +
                     plot.getRangeAxis().getRange().getUpperBound());
@@ -323,14 +395,14 @@ public class TwoDPlotFactory {
      * Draws a vertical line at the threshold value of the Telomerase axis
      *
      * @param twoDChart
-     * @param v - the x axis threshold
+     * @param v         - the x axis threshold
      */
     public void setTelomeraseThreshold(JFreeChart twoDChart, double v) throws Exception {
         XYPlot plot = (XYPlot) twoDChart.getPlot();
-        if( v < plot.getDomainAxis().getRange().getLowerBound())
+        if (v < plot.getDomainAxis().getRange().getLowerBound())
             System.out.println("the specified threshold of " +
                     v + " is lower than the lower bound of the y axis: " + plot.getRangeAxis().getRange().getLowerBound());
-        if( v > plot.getDomainAxis().getRange().getUpperBound())
+        if (v > plot.getDomainAxis().getRange().getUpperBound())
             System.out.println("the specified threshold of " +
                     v + " is greater than the upper bound of the y axis: " +
                     plot.getRangeAxis().getRange().getUpperBound());
@@ -342,7 +414,7 @@ public class TwoDPlotFactory {
      * Draws a vertical line at the threshold value of the Telomerase axis
      *
      * @param twoDChart
-     * @param v - the accuracy value
+     * @param v         - the accuracy value
      */
     public void setAccuracy(JFreeChart twoDChart, double v) throws Exception {
         TextTitle legendText = new TextTitle("Classification accuracy:   "
@@ -352,5 +424,9 @@ public class TwoDPlotFactory {
         legendText.setTextAlignment(HorizontalAlignment.CENTER);
         legendText.setFont(new Font(Font.MONOSPACED, Font.BOLD, 10));
         twoDChart.addSubtitle(legendText);
+    }
+
+    public void setLogScale(boolean logScale) {
+        this.logScale = logScale;
     }
 }

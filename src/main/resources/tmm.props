@@ -3,5 +3,8 @@ ExpMatFile
 ParentDir	
 Iteration	
 Comment	
-TMMLabelsFile
-ValidationMode
+TMMLabelsFile	
+ValidationMode	
+GroupLabelsFile	
+GroupColorsFile	
+BootCycles	200

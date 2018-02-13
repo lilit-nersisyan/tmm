@@ -19,6 +19,7 @@ import java.awt.Font;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Rectangle2D;
 import java.io.*;
+import java.security.acl.Group;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -87,6 +88,32 @@ public class PlotManager {
             MyLabelGenerator labelGenerator = new MyLabelGenerator(seriesLabels.get(seriesKey));
             plot.getRenderer().setSeriesItemLabelGenerator(s, labelGenerator);
             plot.getRenderer().setSeriesPaint(s, tmmLabels.getLabelColor(seriesKey));
+            plot.getRenderer().setSeriesShape(s, new Ellipse2D.Double(0, 0, 10, 10));
+        }
+    }
+
+    public static void setSeriesItemLabels(XYPlot plot,
+                                           HashMap<String, ArrayList<String>> seriesLabels,
+                                           GroupLabels groupLabels) {
+        int n = plot.getSeriesCount();
+        for (int s = 0; s < n; s++) {
+            String seriesKey = (String) plot.getDataset().getSeriesKey(s);
+            MyLabelGenerator labelGenerator = new MyLabelGenerator(seriesLabels.get(seriesKey));
+            plot.getRenderer().setSeriesItemLabelGenerator(s, labelGenerator);
+            plot.getRenderer().setSeriesPaint(s, groupLabels.getGroupColorsMap().get(seriesKey));
+            plot.getRenderer().setSeriesShape(s, new Ellipse2D.Double(0, 0, 10, 10));
+        }
+    }
+
+    public static void setSeriesItemLabels(XYPlot plot,
+                                           HashMap<String, ArrayList<String>> groupSamplesMap,
+                                           HashMap<String, Color> groupColorsMap) {
+        int n = plot.getSeriesCount();
+        for (int s = 0; s < n; s++) {
+            String seriesKey = (String) plot.getDataset().getSeriesKey(s);
+            MyLabelGenerator labelGenerator = new MyLabelGenerator(groupSamplesMap.get(seriesKey));
+            plot.getRenderer().setSeriesItemLabelGenerator(s, labelGenerator);
+            plot.getRenderer().setSeriesPaint(s, groupColorsMap.get(seriesKey));
             plot.getRenderer().setSeriesShape(s, new Ellipse2D.Double(0, 0, 10, 10));
         }
     }

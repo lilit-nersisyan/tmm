@@ -185,6 +185,13 @@ public class TMMLabels {
             }
         } catch (IOException e) {
             return e.getMessage();
+        } finally {
+            try {
+                reader.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return (e.getMessage());
+            }
         }
         return "true";
     }

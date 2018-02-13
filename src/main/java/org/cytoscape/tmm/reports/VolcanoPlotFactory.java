@@ -4,23 +4,14 @@ import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.labels.XYItemLabelGenerator;
 import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.data.xy.XYDataItem;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-import org.jfree.ui.RectangleAnchor;
-import org.jfree.ui.RectangleInsets;
-import org.jfree.ui.TextAnchor;
-import sun.util.resources.cldr.zh.CalendarData_zh_Hans_HK;
 
 import java.awt.*;
-import java.awt.geom.Ellipse2D;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Set;
 
 /**
  * Created by Lilit Nersisyan on 4/7/2017.
@@ -30,6 +21,7 @@ import java.util.Set;
  * Creates volcano plots from PSF scores and p values
  */
 public class VolcanoPlotFactory {
+
     private String SCORESKEY = "scores";
     private String PVALUESKEY = "pvalues";
     private String ALTKEY = "ALT";
@@ -43,16 +35,19 @@ public class VolcanoPlotFactory {
 
     private SummaryFileHandler summaryFileHandler;
     private TMMLabels tmmLabels;
+    private GroupLabels groupLabels;
 
     /**
-     * Constructor for non-labeled samples
+     * Constructor for estimation mode
      *
      * @param summaryFileHandler
+     * @param groupLabels        GroupLabels class object containing group labels and colors
      */
-    public VolcanoPlotFactory(SummaryFileHandler summaryFileHandler) {
+    public VolcanoPlotFactory(SummaryFileHandler summaryFileHandler, GroupLabels groupLabels) {
         this.summaryFileHandler = summaryFileHandler;
         summaryMap = summaryFileHandler.getSummaryMap();
         samples = summaryFileHandler.getSamples();
+        this.groupLabels = groupLabels;
     }
 
     /**
@@ -114,7 +109,7 @@ public class VolcanoPlotFactory {
     private XYDataset[] createDatasets() throws Exception {
         try {
             if (!labeled) {
-                return createNonLabeledDatasets();
+                return createGroupLabeledDatasets();
             } else {
                 return createTMMLabeledDatasets();
             }
@@ -137,8 +132,8 @@ public class VolcanoPlotFactory {
             altDataset = new XYSeriesCollection();
             telomeraseDataset = new XYSeriesCollection();
 
-            XYSeries altSeries = getSeries(ALTKEY);
-            XYSeries telomeraseSeries = getSeries(TELOMERASEKEY);
+            XYSeries altSeries = getTMMLabeledSeries(ALTKEY);
+            XYSeries telomeraseSeries = getTMMLabeledSeries(TELOMERASEKEY);
 
             altDataset.addSeries(altSeries);
             telomeraseDataset.addSeries(telomeraseSeries);
@@ -148,6 +143,38 @@ public class VolcanoPlotFactory {
         }
 
         return new XYSeriesCollection[]{altDataset, telomeraseDataset};
+    }
+
+    /**
+     * Creates ALT and telomerase datasets, each containing a series of group-labeled sample points.
+     *
+     * @return an array of XYDatasets, the first being the ALT and the second being the Telomerase dataset
+     * @throws Exception
+     */
+    private XYDataset[] createGroupLabeledDatasets() throws Exception {
+        XYSeriesCollection altDataset = null;
+        XYSeriesCollection telomeraseDataset = null;
+        try {
+
+            altDataset = new XYSeriesCollection();
+            for (String groupLabel : groupLabels.getGroups()) {
+                XYSeries series = getGroupLabeledSeries(ALTKEY, groupLabel);
+                altDataset.addSeries(series);
+            }
+
+            telomeraseDataset = new XYSeriesCollection();
+            for (String groupLabel : groupLabels.getGroups()) {
+                XYSeries series = getGroupLabeledSeries(TELOMERASEKEY, groupLabel);
+                telomeraseDataset.addSeries(series);
+            }
+
+        } catch (Exception e) {
+            throw new Exception("Problem generating the 2D Group labeled TMM dataset: "
+                    + (e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
+        }
+
+        return new XYSeriesCollection[]{altDataset, telomeraseDataset};
+
     }
 
     /**
@@ -164,13 +191,13 @@ public class VolcanoPlotFactory {
 
             altDataset = new XYSeriesCollection();
             for (String seriesKey : seriesKeys) {
-                XYSeries series = getSeries(ALTKEY, seriesKey);
+                XYSeries series = getTMMLabeledSeries(ALTKEY, seriesKey);
                 altDataset.addSeries(series);
             }
 
             telomeraseDataset = new XYSeriesCollection();
             for (String seriesKey : seriesKeys) {
-                XYSeries series = getSeries(TELOMERASEKEY, seriesKey);
+                XYSeries series = getTMMLabeledSeries(TELOMERASEKEY, seriesKey);
                 telomeraseDataset.addSeries(series);
             }
 
@@ -189,7 +216,7 @@ public class VolcanoPlotFactory {
      * @return
      * @throws Exception
      */
-    private XYSeries getSeries(String tmmKey) throws Exception {
+    private XYSeries getTMMLabeledSeries(String tmmKey) throws Exception {
         XYSeries series = new XYSeries("Unknown TMM", false);
         HashMap<String, Double> scores = getScores(tmmKey);
         HashMap<String, Double> pvalues = getPvalues(tmmKey);
@@ -212,7 +239,7 @@ public class VolcanoPlotFactory {
      * @return XYSeries containing samples with the specified TMM annotation, each sample with psf scores and p values from the specified TMM network
      * @throws Exception
      */
-    private XYSeries getSeries(String tmmKey, String seriesKey) throws Exception {
+    private XYSeries getTMMLabeledSeries(String tmmKey, String seriesKey) throws Exception {
         XYSeries series = new XYSeries(seriesKey, false);
         HashMap<String, Double> scores = getScores(tmmKey);
         HashMap<String, Double> pvalues = getPvalues(tmmKey);
@@ -229,6 +256,34 @@ public class VolcanoPlotFactory {
             }
         }
         seriesLabels.put(seriesKey, labels);
+        return series;
+    }
+
+    /**
+     * Returns a series of points with psf scores and p values for the specified tmm
+     * and the samples with the specified Group label annotation.
+     *
+     * @param tmmKey     the TMM network key
+     * @param groupLabel the group label annotation of the samples
+     * @return XYSeries containing samples from the specified group label annotation,
+     * each sample with psf scores and p values from the specified TMM network
+     * @throws Exception
+     */
+    private XYSeries getGroupLabeledSeries(String tmmKey, String groupLabel) throws Exception {
+        XYSeries series = new XYSeries(groupLabel, false);
+        HashMap<String, Double> scores = getScores(tmmKey);
+        HashMap<String, Double> pvalues = getPvalues(tmmKey);
+
+        ArrayList<String> labels = new ArrayList<>();
+
+        for (String s : groupLabels.getSamples(groupLabel)) {
+            double score = scores.get(s);
+            double pvalue = pvalues.get(s);
+            double y = getLog2Pvalue(pvalue);
+            series.add(score, y);
+            labels.add(s);
+        }
+        seriesLabels.put(groupLabel, labels);
         return series;
     }
 
@@ -276,7 +331,10 @@ public class VolcanoPlotFactory {
     private void renderPlot(XYPlot plot, String tmmkey) {
         PlotManager.renderBase(plot);
         if (!labeled)
-            PlotManager.setBaseItemLabels(plot, samples);
+//            PlotManager.setBaseItemLabels(plot, samples);
+            PlotManager.setSeriesItemLabels(plot,
+                    groupLabels.getGroupSamplesMap(),
+                    groupLabels.getGroupColorsMap());
         else {
             PlotManager.setSeriesItemLabels(plot, seriesLabels, tmmLabels);
         }

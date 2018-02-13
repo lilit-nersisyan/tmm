@@ -5,6 +5,7 @@ import com.itextpdf.text.Font;
 import org.cytoscape.application.swing.AbstractCyAction;
 import org.cytoscape.tmm.TMMActivator;
 import org.cytoscape.tmm.gui.DoubleFormatter;
+import org.cytoscape.tmm.gui.TMMPanel;
 import org.cytoscape.tmm.processing.ParsedFilesDirectory;
 import org.cytoscape.tmm.reports.*;
 import org.cytoscape.work.AbstractTask;
@@ -12,11 +13,9 @@ import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
 import org.jfree.chart.JFreeChart;
 
-import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -27,29 +26,35 @@ import java.util.HashMap;
  * Created by Lilit Nersisyan on 4/7/2017.
  */
 public class GenerateReportAction extends AbstractCyAction {
+    private boolean isValidationMode;
     private String iterationTitle;
     private String comment;
     private File tmmLabelsFile;
+    private File sampleColorsFile;
     private File summaryFile;
     private File reportDir;
     private File pdfFile;
     private File numericFile;
     private SummaryFileHandler summaryFileHandler;
     private TMMLabels tmmLabels;
+    private GroupLabels groupLabels;
     private SVM svm;
     private HashMap<String, HashMap<String, Double>> boxplotStats;
     private int bootCycles;
     private ParsedFilesDirectory parsedFilesDirectory;
 
     /**
-     * Standart constructor for the non-labeled samples case.
-     *  @param name        the name of the action
-     * @param summaryFile the file containing PSF summary values
-     * @param reportDir     the output pdf file
+     * Standart constructor for the estimation mode.
+     *
+     * @param name                 the name of the action
+     * @param summaryFile          the file containing PSF summary values
+     * @param reportDir            the output pdf file
+     * @param groupLabels          GroupLabels class object containing group labels and group colors
      * @param parsedFilesDirectory
      */
     public GenerateReportAction(String name, File summaryFile, File reportDir,
-                                String iterationTitle, String comment, int bootCycles, ParsedFilesDirectory parsedFilesDirectory) {
+                                GroupLabels groupLabels, String iterationTitle, String comment,
+                                int bootCycles, ParsedFilesDirectory parsedFilesDirectory, boolean isValidationMode) {
         super(name);
         this.summaryFile = summaryFile;
         this.reportDir = reportDir;
@@ -59,28 +64,37 @@ public class GenerateReportAction extends AbstractCyAction {
         this.numericFile = new File(reportDir, iterationTitle + "_scores.txt");
         this.bootCycles = bootCycles;
         this.parsedFilesDirectory = parsedFilesDirectory;
+        this.groupLabels = groupLabels;
     }
 
     /**
-     * Standart constructor for the case of annotated labeled samples.
-     *  @param name          the name of the action
-     * @param summaryFile   the file containing SPF summary values
-     * @param reportDir       the output pdf file
-     * @param tmmLabelsFile the file containing TMM annotations
+     * Standart constructor for the case of annotated or color-labeled samples.
+     *
+     * @param name                 the name of the action
+     * @param summaryFile          the file containing SPF summary values
+     * @param reportDir            the output pdf file
+     * @param labelsFile           the file containing TMM annotations or sample colors
      * @param parsedFilesDirectory
      */
     public GenerateReportAction(String name, File summaryFile, File reportDir,
-                                File tmmLabelsFile, String iterationTitle, String comment, int bootCycles, ParsedFilesDirectory parsedFilesDirectory) {
+                                File labelsFile, String iterationTitle, String comment,
+                                int bootCycles, ParsedFilesDirectory parsedFilesDirectory,
+                                boolean isValidationMode) {
         super(name);
         this.summaryFile = summaryFile;
         this.reportDir = reportDir;
-        this.tmmLabelsFile = tmmLabelsFile;
+        this.isValidationMode = isValidationMode;
+        if (isValidationMode)
+            this.tmmLabelsFile = labelsFile;
+        else
+            this.sampleColorsFile = labelsFile;
         this.iterationTitle = iterationTitle;
         this.comment = comment;
         this.pdfFile = new File(reportDir, iterationTitle + "_report.pdf");
         this.numericFile = new File(reportDir, iterationTitle + "_scores.txt");
         this.bootCycles = bootCycles;
         this.parsedFilesDirectory = parsedFilesDirectory;
+
     }
 
     @Override
@@ -112,13 +126,15 @@ public class GenerateReportAction extends AbstractCyAction {
                 }
                 summaryFileHandler.printSummaryMap();
 
-                //If tmmLabelsFile is supplied, read tmm annotations and store in TMMLabels
-                tmmLabels = null;
-                if (tmmLabelsFile != null) {
-                    try {
-                        tmmLabels = new TMMLabels(tmmLabelsFile);
-                    } catch (Exception e) {
-                        throw new Exception("Problem handling TMM labels file: " + e.getMessage());
+                if (isValidationMode) {
+                    //If tmmLabelsFile is supplied, read tmm annotations and store in TMMLabels
+                    tmmLabels = null;
+                    if (tmmLabelsFile != null) {
+                        try {
+                            tmmLabels = new TMMLabels(tmmLabelsFile);
+                        } catch (Exception e) {
+                            throw new Exception("Problem handling TMM labels file: " + e.getMessage());
+                        }
                     }
                 }
 
@@ -133,42 +149,6 @@ public class GenerateReportAction extends AbstractCyAction {
 
                 ArrayList<JFreeChart> charts = new ArrayList<>();
 
-                // Create volcano plots
-                VolcanoPlotFactory volcanoPlotFactory = null;
-                try {
-                    if (tmmLabels != null)
-                        volcanoPlotFactory = new VolcanoPlotFactory(summaryFileHandler, tmmLabels);
-                    else
-                        volcanoPlotFactory = new VolcanoPlotFactory(summaryFileHandler);
-                    JFreeChart[] volcanoCharts = null;
-                    volcanoCharts = volcanoPlotFactory.createVolcanoPlots();
-                    for (int i = 0; i < volcanoCharts.length; i++)
-                        charts.add(volcanoCharts[i]);
-                } catch (Exception e) {
-                    throw new Exception("Could not generate volcano plots: " + e.getMessage());
-                }
-
-                taskMonitor.setProgress(0.4);
-                // finished with volcano plots
-
-                // if labeled, crate boxplots
-                if (tmmLabels != null) {
-                    BoxPlotFactory boxPlotFactory = new BoxPlotFactory(summaryFileHandler, tmmLabels);
-
-                    JFreeChart[] boxplots = null;
-                    try {
-                        boxplots = boxPlotFactory.createBoxplots();
-                        for (int i = 0; i < boxplots.length; i++)
-                            charts.add(boxplots[i]);
-                        boxplotStats = boxPlotFactory.getBoxplotStats();
-                    } catch (Exception e) {
-                        throw new Exception("Could not generate boxplots: " + e.getMessage());
-                    }
-                }
-                // finished with boxplots
-
-                taskMonitor.setProgress(0.6);
-
                 // generate 2D plots
                 TwoDPlotFactory twoDPlotFactory = null;
 
@@ -176,12 +156,16 @@ public class GenerateReportAction extends AbstractCyAction {
                     if (tmmLabels != null)
                         twoDPlotFactory = new TwoDPlotFactory(summaryFileHandler, tmmLabels);
                     else
-                        twoDPlotFactory = new TwoDPlotFactory(summaryFileHandler);
+                        twoDPlotFactory = new TwoDPlotFactory(summaryFileHandler, groupLabels);
 
                     // finished with twoDplots (without svm)
-                    JFreeChart twoDChart = null;
-                    twoDChart = twoDPlotFactory.create2DPlot();
+                    JFreeChart twoDChart = twoDPlotFactory.create2DPlot();
+                    twoDPlotFactory.setLogScale(true);
+                    JFreeChart logTwoDChart = twoDPlotFactory.create2DPlot();
+
                     twoDPlotFactory.setDrawPointLabels(false);
+                    JFreeChart logTwoDChart_woLabels = twoDPlotFactory.create2DPlot();
+                    twoDPlotFactory.setLogScale(false);
                     JFreeChart twoDChart_woLabels = twoDPlotFactory.create2DPlot();
                     if (tmmLabels != null) {
                         svm = new SVM(summaryFileHandler, tmmLabels);
@@ -194,12 +178,68 @@ public class GenerateReportAction extends AbstractCyAction {
                         twoDPlotFactory.setALTThreshold(twoDChart_woLabels, svm.getH());
                         twoDPlotFactory.setTelomeraseThreshold(twoDChart_woLabels, svm.getV());
                         twoDPlotFactory.setAccuracy(twoDChart_woLabels, svm.getAccuracy());
+
+                        twoDPlotFactory.setALTThreshold(logTwoDChart,
+                                Math.log(svm.getH() + twoDPlotFactory.LOGINCREMENT));
+                        twoDPlotFactory.setTelomeraseThreshold(logTwoDChart,
+                                Math.log(svm.getV() + twoDPlotFactory.LOGINCREMENT));
+                        twoDPlotFactory.setAccuracy(logTwoDChart, svm.getAccuracy());
+
+                        twoDPlotFactory.setALTThreshold(logTwoDChart_woLabels,
+                                Math.log(svm.getH() + twoDPlotFactory.LOGINCREMENT));
+                        twoDPlotFactory.setTelomeraseThreshold(logTwoDChart_woLabels,
+                                Math.log(svm.getV() + twoDPlotFactory.LOGINCREMENT));
+                        twoDPlotFactory.setAccuracy(logTwoDChart_woLabels, svm.getAccuracy());
                     }
-                    charts.add(twoDChart);
                     charts.add(twoDChart_woLabels);
+                    charts.add(twoDChart);
+                    charts.add(logTwoDChart_woLabels);
+                    charts.add(logTwoDChart);
+
                 } catch (Exception e) {
                     throw new Exception("Could not generate 2D plots: " + e.getMessage());
                 }
+
+
+                taskMonitor.setProgress(0.4);
+
+
+
+                // if labeled, crate boxplots
+                BoxPlotFactory boxPlotFactory;
+                if (tmmLabels != null)
+                    boxPlotFactory = new BoxPlotFactory(summaryFileHandler, tmmLabels);
+                else
+                    boxPlotFactory = new BoxPlotFactory(summaryFileHandler, groupLabels);
+                JFreeChart[] boxplots = null;
+                try {
+                    boxplots = boxPlotFactory.createBoxplots();
+                    for (int i = 0; i < boxplots.length; i++)
+                        charts.add(boxplots[i]);
+                    boxplotStats = boxPlotFactory.getBoxplotStats();
+                } catch (Exception e) {
+                    throw new Exception("Could not generate boxplots: " + e.getMessage());
+                }
+                taskMonitor.setProgress(0.6);
+                // finished with boxplots
+
+                // Create volcano plots
+                VolcanoPlotFactory volcanoPlotFactory = null;
+                try {
+                    if (tmmLabels != null)
+                        volcanoPlotFactory = new VolcanoPlotFactory(summaryFileHandler, tmmLabels);
+                    else
+                        volcanoPlotFactory = new VolcanoPlotFactory(summaryFileHandler, groupLabels);
+                    JFreeChart[] volcanoCharts = null;
+                    volcanoCharts = volcanoPlotFactory.createVolcanoPlots();
+                    for (int i = 0; i < volcanoCharts.length; i++)
+                        charts.add(volcanoCharts[i]);
+                } catch (Exception e) {
+                    throw new Exception("Could not generate volcano plots: " + e.getMessage());
+                }
+
+                // finished with volcano plots
+
                 taskMonitor.setProgress(0.8);
 
                 ArrayList<Paragraph> firstPage = null;
@@ -217,7 +257,7 @@ public class GenerateReportAction extends AbstractCyAction {
                 try {
                     PlotManager.writeChartAsPDF(pdfFile, firstPage, charts, width, height);
                 } catch (Exception e) {
-                    throw new Exception("Could not write to PSF: " + e.getMessage());
+                    throw new Exception("Could not write to PDF: " + e.getMessage());
                 }
 
                 taskMonitor.setStatusMessage("Report written to " + pdfFile.getAbsolutePath());
@@ -235,7 +275,7 @@ public class GenerateReportAction extends AbstractCyAction {
             File numericOutputFile = new File(reportDir, "TMM_psf_summary.xls");
             PrintWriter writer = new PrintWriter(numericOutputFile);
             writer.append("Sample\tALT_PSF\tALT_pValue\tTelomerase_PSF\tTelomerase_pValue\n");
-            for(String s : summaryFileHandler.getSamples()){
+            for (String s : summaryFileHandler.getSamples()) {
                 String line = s + "\t";
                 line += summaryFileHandler.getSummaryMap().get(SummaryFileHandler.ALTKEY).
                         get(SummaryFileHandler.SCORESKEY).get(s) + "\t";
@@ -289,7 +329,7 @@ public class GenerateReportAction extends AbstractCyAction {
                 options += "Mode:      Validation\n";
                 options += "TMM labels file:      " + tmmLabelsFile.getAbsolutePath() + "\n";
             } else {
-                options += "Mode:      Prediction";
+                options += "Mode:      Assessment";
             }
             firstPage.add(content(options));
 
@@ -305,32 +345,32 @@ public class GenerateReportAction extends AbstractCyAction {
                     HashMap<String, Double> thisBoxplotStats = boxplotStats.get(tmmkey);
                     firstPage.add(content("\nALT PSF: overall p value (Kruskal-Wallis rank sum test):      "
                             + DoubleFormatter.formatDouble(
-                                    thisBoxplotStats.get(BoxPlotFactory.KWP),3)));
+                            thisBoxplotStats.get(BoxPlotFactory.KWP), 3)));
 
                     firstPage.add(content("ALT versus norm:      Median difference:      "
                             + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.MD1), 3)
                             + "      p value      "
                             + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.p1), 3)));
                     firstPage.add(content("ALT versus Tel-ase:      Median difference:      "
-                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.MD2),3)
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.MD2), 3)
                             + "      p value      "
-                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.p2),3)));
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.p2), 3)));
 
 
                     tmmkey = BoxPlotFactory.TELOMERASEKEY;
                     thisBoxplotStats = boxplotStats.get(tmmkey);
                     firstPage.add(content("\nTel-ase PSF: overall p value (Kruskal-Wallis rank sum test):      "
                             + DoubleFormatter.formatDouble(
-                            thisBoxplotStats.get(BoxPlotFactory.KWP),3)));
+                            thisBoxplotStats.get(BoxPlotFactory.KWP), 3)));
 
                     firstPage.add(content("Tel-ase versus norm:      Median difference:      "
                             + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.MD1), 3)
                             + "      p value      "
                             + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.p1), 3)));
                     firstPage.add(content("Tel-ase versus ALT:      Median difference:      "
-                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.MD2),3)
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.MD2), 3)
                             + "      p value      "
-                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.p2),3)));
+                            + DoubleFormatter.formatDouble(thisBoxplotStats.get(BoxPlotFactory.p2), 3)));
                 }
             }
             return firstPage;
